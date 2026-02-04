@@ -1,3 +1,18 @@
+# Plan
+
+1. ID multi-token words in a document
+   `[mul][ti][ple]`
+2. Find maximum attn score on `mul` over all tokens following `ple`.
+3. Find maximum attn score on `ple` over all token following `ple`.
+
+For each layer, attention head.
+We expect attn on `ple` to be higher.
+Is this true?
+
+
+
+# References
+
 Feucht, Sheridan, David Atkinson, Byron C. Wallace, and David Bau. 2024.
 “Token Erasure as a Footprint of Implicit Vocabulary Items in LLMs.”
 *EMNLP*, 9727–39. <https://aclanthology.org/2024.emnlp-main.543>.

@@ -18,9 +18,9 @@ Remarkable Robustness of LLMs: Stages of Inference?*
 <https://arxiv.org/abs/2406.19384>.
 
 Liu, Alisa, Jonathan Hayase, Valentin Hofmann, Sewoong Oh, Noah A.
-Smith, and Yejin Choi. 2026. “SuperBPE: Space Travel for Language
-Models.” *Tokenization Workshop*.
-<https://openreview.net/forum?id=LwTWkSXIpt>.
+Smith, and Yejin Choi. 2025. “SuperBPE: Space Travel for Language
+Models.” *Second Conference on Language Modeling*.
+<https://openreview.net/forum?id=lcDRvffeNP>.
 
 Park, Kiho, Yo Joong Choe, Yibo Jiang, and Victor Veitch. 2025. “The
 Geometry of Categorical and Hierarchical Concepts in Large Language

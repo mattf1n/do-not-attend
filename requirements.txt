@@ -1,2 +1,4 @@
-torch
+torch==2.7.0 --index-url https://download.pytorch.org/whl/cu126
 datasets
+importlib
+zstandard # getting info for IterableDataset

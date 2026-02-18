@@ -1,11 +1,15 @@
 # Plan
+- data: ~~dolma 3 (wiki, 10 gb)~~ pile-uncopyrighted: [monology/pile-uncopyrighted · Datasets at Hugging Face](https://huggingface.co/datasets/monology/pile-uncopyrighted)
+
+- model: Olma 3 7B
 
 1. ID multi-token words in a document
    `[mul][ti][ple]`
+For each layer, attention head.
 2. Find maximum attn score on `mul` over all tokens following `ple`.
 3. Find maximum attn score on `ple` over all token following `ple`.
 
-For each layer, attention head.
+
 We expect attn on `ple` to be higher.
 Is this true?
 

@@ -3,7 +3,7 @@ import string
 import torch
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
-
+from pprint import pprint
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 def get_data(dataset_name="monology/pile-uncopyrighted"):
@@ -32,23 +32,30 @@ def get_first_paragraph():
     sample = next(iter(data['train']))
     return sample['text'].split("\n\n")[0] #gets the first paragraph
 
-
 def get_multi_token_words(text, tokenizer):
+    '''
+    finds all multi-token words
+
+    exception: if the last word in sentence is multi-token we exclude it
+    '''
+
     result = {}
     words = re.findall(r"\w+(?:[-']\w+)*|[^\w\s]", text)
     pos = 0
+    total_tokens = len(tokenizer.tokenize(text))
 
     for word in words:
         word_tokens = tokenizer.tokenize(word)
         n = len(word_tokens)
 
-        if word.isalpha() and len(word_tokens) > 1:
+        if word.isalpha() and n > 1 and pos + n < total_tokens:
             result[word] = {
                 "tokens": word_tokens,
                 "positions": list(range(pos, pos + n)),
             }
         pos += n
     return result
+
 
 
 def get_attentions(input_data, model, tokenizer):
@@ -73,107 +80,131 @@ def p1_att():
     return att, text
 
 
+def clean_subtokens(text, positions, tokenizer):
 
-
-def analyze_multi_token_attention(text, model, tokenizer, top_k=None):
-    """Analyze attention patterns for multi-token words.
-
-    For each multi-token word, finds:
-    - max_per_head: top-k attended tokens per layer/head combo
-    - max_global: majority vote across all layers/heads (top 5)
-
-    Args:
-        text: input string to analyze
-        model: HuggingFace model with eager attention
-        tokenizer: corresponding tokenizer
-        top_k: number of top tokens to track per word. Defaults to
-               the number of subtokens in each word.
-
-    Returns:
-        dict mapping each multi-token word to its attention results
-    """
-    from collections import Counter
-
-    
-
-    multi = get_multi_token_words(text, tokenizer)
-    att = get_attentions(text, model, tokenizer)
-    att = [a.squeeze(0) for a in att]  # remove batch dim
-    raw_tokens = tokenizer.tokenize(text)
-
-
-    def clean(tok):
-        """Convert BPE token to readable string."""
+    def clean_token(tok, tokenizer):
         ids = tokenizer.convert_tokens_to_ids([tok])
         return tokenizer.decode(ids).strip()
 
-    tokens = [clean(t) for t in raw_tokens]  # clean once
+    raw_tokens = tokenizer.tokenize(text)
+    return [clean_token(raw_tokens[p], tokenizer) for p in positions]
 
-    num_layers = len(att)
-    num_heads = att[0].shape[0]
+
+def analyze_multi_token_attention(attentions, target_positions, token_strings=None):
+    all_attn = torch.stack(attentions)[:, 0]
+    num_layers, num_heads, seq_len, _ = all_attn.shape
+
+    last_pos = max(target_positions)
+    valid_start = last_pos + 1
 
     results = {}
 
-    for word, info in multi.items():
-        positions = info["positions"]
-        k = top_k if top_k is not None else len(positions)
-        clean_subtokens = [tokens[p] for p in positions]
+    for i, pos in enumerate(target_positions):
+        global_max = -1.0
+        global_max_loc = None
+        head_maxes = []
 
-        word_results = {
-            "tokens": clean_subtokens,
-            "positions": positions,
-            "top_k": k,
-            "max_per_head": {},
-            "max_global": {},
+        for layer in range(num_layers):
+            for head in range(num_heads):
+                col = all_attn[layer, head, valid_start:, pos]
+
+                if col.numel() == 0:
+                    head_maxes.append(0.0)
+                    continue
+
+                head_max = col.max().item()
+                head_maxes.append(head_max)
+
+                if head_max > global_max:
+                    global_max = head_max
+                    row_idx = valid_start + col.argmax().item()
+                    global_max_loc = (layer, head, row_idx)
+
+        results[i] = {
+            "token": token_strings[i] if token_strings else str(pos),
+            "position": pos,
+            "max_attention": global_max,
+            "max_location (layer, head, row)": global_max_loc,
+            "avg_max_per_head": sum(head_maxes) / len(head_maxes),
         }
-
-        for i, pos in enumerate(positions):
-            head_scores = []
-            vote_counts = Counter()
-
-            for layer in range(num_layers):
-                for head in range(num_heads):
-                    row = att[layer][head][pos].clone()
-                    row[pos] = 0.0  # exclude self-attention
-
-                    top_vals, top_idxs = row.topk(k)
-                    top_tokens = [(tokens[idx], top_vals[j].item()) for j, idx in enumerate(top_idxs)]
-
-                    head_scores.append({
-                        "layer": layer,
-                        "head": head,
-                        "top_k": top_tokens,
-                    })
-
-                    max_idx = row.argmax().item()
-                    vote_counts[tokens[max_idx]] += 1
-
-            word_results["max_per_head"][clean_subtokens[i]] = head_scores
-            total_votes = num_layers * num_heads
-            word_results["max_global"][clean_subtokens[i]] = [
-                (token, count, f"{count/total_votes:.1%}")
-                for token, count in vote_counts.most_common(5)
-            ]
-
-        results[word] = word_results
 
     return results
 
 
+def get_all_attention_results(attentions, multi, text, tokenizer):
+    """Compute attention analysis for every multi-token word in the text.
+
+    Args:
+        attentions: tuple of attention tensors from model output, one per layer
+        multi: output of get_multi_token_words, mapping words to tokens/positions
+        text: the original input string (used for cleaning subtoken strings)
+        tokenizer: the tokenizer used for encoding
+
+    Returns:
+        dict mapping each multi-token word to its per-subtoken attention stats
+    """
+    results = {}
+    for word, info in multi.items():
+        results[word] = analyze_multi_token_attention(
+            attentions, info["positions"], token_strings=info["tokens"]
+        )
+    return results
+
+def summarize_results(results,tokenizer):
+    """
+    For each multi-token word, maps each subtoken's cleaned string
+    to its max attention score.
+
+    Args:
+        results: output of test_pipeline's results dict
+    """
+    summary = {}
+    for word, subtokens in results.items():
+        word_summary = {}
+        for i, info in subtokens.items():
+            clean = tokenizer.decode(tokenizer.convert_tokens_to_ids([info["token"]])).strip()
+            word_summary[clean] = info["max_attention"]
+        summary[word] = word_summary
+    return summary
+
+
 def test_pipeline():
-    '''
-    for one setence, 
-        - find all of the multi-token words
-        - analyze the max attention scores of said words
-    '''
+    """End-to-end pipeline: load data/model, run inference, analyze attention.
 
-    paragraph = get_first_paragraph()
+    Returns:
+        paragraph: the input text
+        multi: dict of multi-token words with their tokens and positions
+        results: per-word, per-subtoken attention analysis
+        summary: condensed mapping of subtoken strings to max attention scores
+    """
 
-    model,tokenizer = get_model()
+    choice = input("1: paragraph \n2: one doc ")
 
-    multi = get_multi_token_words(paragraph, tokenizer)
+    model, tokenizer = get_model()
 
-    results = analyze_multi_token_attention(paragraph, model, tokenizer, top_k=None)
+    if (choice == "1"):
+        print("paragraph selected")
+        text = get_first_paragraph()
+    elif (choice == "2"):
+        print("one doc selected")
+        text = get_data_sample()
+    else:
+        print("default selected")
+        text = get_first_paragraph()
 
-    return paragraph, multi, results
-    
+   
+    attentions = get_attentions(text, model, tokenizer)
+    multi = get_multi_token_words(text, tokenizer)
+
+    results = get_all_attention_results(attentions, multi, text, tokenizer)
+    max_summary = summarize_results(results, tokenizer)
+
+    return text, multi, results, max_summary
+
+
+
+
+if __name__ == "__main__":  
+    text, multi, results, max_summary = test_pipeline()
+
+    pprint(max_summary)

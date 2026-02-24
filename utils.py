@@ -36,6 +36,15 @@ def get_first_paragraph():
     sample = next(iter(data['train']))
     return sample['text'].split("\n\n")[0] #gets the first paragraph
 
+# n: how many paragraphs of text in string
+def get_paragraphs(n = 1):
+    data = get_data()       
+    sample = next(iter(data['train']))
+    paragraphs_split = sample['text'].split("\n\n")[:n] #gets the first  to nth paragraph
+    paragraphs = "".join("\n\n")
+    return paragraphs
+
+
 def get_multi_token_words(text, tokenizer):
     '''
     finds all multi-token words
@@ -65,6 +74,8 @@ def get_attentions(input_data, model, tokenizer):
     from input string, run inference and get the attention scores of the model
     '''
     inputs = tokenizer(input_data, return_tensors="pt")
+    # Move inputs to DEVICE
+    inputs = {k: v.to(DEVICE) for k, v in inputs.items()} 
     with torch.no_grad():
         outputs = model(**inputs, output_attentions=True)
     return outputs.attentions
@@ -213,27 +224,29 @@ def test_pipeline(output_json_path="test_pipeline_results_all.json"):
         summary: condensed mapping of subtoken strings to max attention scores
     """
 
-    choice = input("1: paragraph \n2: one doc ")
+    # choice = input("1: paragraph \n2: one doc ")
 
     model, tokenizer = get_model()
 
-    if (choice == "1"):
-        print("paragraph selected")
-        text = get_first_paragraph()
-    elif (choice == "2"):
-        print("one doc selected")
-        text = get_data_sample()
-    else:
-        print("default selected")
-        text = get_first_paragraph()
-
-   
+    # if (choice == "1"):
+    #     print("paragraph selected")
+    #     text = get_first_paragraph()
+    # elif (choice == "2"):
+    print("one doc selected")
+    text = get_data_sample()
+    # else:
+    #     print("default selected")
+    #     text = get_first_paragraph()
     attentions = get_attentions(text, model, tokenizer)
-    multi = get_multi_token_words(text, tokenizer)
 
+    # Free GPU memory from the model before heavy analysis
+    del model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    multi = get_multi_token_words(text, tokenizer)
     scores = get_all_attention_results(attentions, multi, text, tokenizer)
     # summary = summarize_results_max(scores, tokenizer)
-
     # Convert everything to serializable form for JSON
     json_data = {
         "text": text,

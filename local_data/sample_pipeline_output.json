@@ -1,0 +1,8707 @@
+{
+  "text": "It is done, and submitted. You can play \u201cSurvival of the Tastiest\u201d on Android, and on the web. Playing on the web works, but you have to simulate multi-touch for table moving and that can be a bit confusing.\n\nThere\u2019s a lot I\u2019d like to talk about. I\u2019ll go through every topic, insted of making the typical what went right/wrong list.\n\nConcept\n\nWorking over the theme was probably one of the hardest tasks I had to face.\n\nOriginally, I had an idea of what kind of game I wanted to develop, gameplay wise \u2013 something with lots of enemies/actors, simple graphics, maybe set in space, controlled from a top-down view. I was confident I could fit any theme around it.\n\nIn the end, the problem with a theme like \u201cEvolution\u201d in a game is that evolution is unassisted. It happens through several seemingly random mutations over time, with the most apt permutation surviving. This genetic car simulator is, in my opinion, a great example of actual evolution of a species facing a challenge. But is it a game?\n\nIn a game, you need to control something to reach an objective. That control goes against what evolution is supposed to be like. If you allow the user to pick how to evolve something, it\u2019s not evolution anymore \u2013 it\u2019s the equivalent of intelligent design, the fable invented by creationists to combat the very idea of evolution. Being agnostic and a Pastafarian, that\u2019s not something that rubbed me the right way.\n\nHence, my biggest dillema when deciding what to create was not with what I wanted to create, but with what I did not. I didn\u2019t want to create an \u201cintelligent design\u201d simulator and wrongly call it evolution.\n\nThis is a problem, of course, every other contestant also had to face. And judging by the entries submitted, not many managed to work around it. I\u2019d say the only real solution was through the use of artificial selection, somehow. So far, I haven\u2019t seen any entry using this at its core gameplay.\n\nAlas, this is just a fun competition and after a while I decided not to be as strict with the game idea, and allowed myself to pick whatever I thought would work out.\n\nMy initial idea was to create something where humanity tried to evolve to a next level but had some kind of foe trying to stop them from doing so. I kind of had this image of human souls flying in space towards a monolith or a space baby (all based in 2001: A Space Odyssey of course) but I couldn\u2019t think of compelling (read: serious) mechanics for that.\n\nBorgs were my next inspiration, as their whole hypothesis fit pretty well into the evolution theme. But how to make it work? Are you the borg, or fighting the Borg?\n\nThe third and final idea came to me through my girlfriend, who somehow gave me the idea of making something about the evolution of Pasta. The more I thought about it the more it sounded like it would work, so I decided to go with it.\n\nConversations with my inspiring co-worker Roushey (who also created the \u201cMechanical Underdogs\u201d signature logo for my intros) further matured the concept, as it involved into the idea of having individual pieces of pasta flying around and trying to evolve until they became all-powerful. A secondary idea here was that the game would work to explain how the Flying Spaghetti Monster came to exist \u2013 by evolving from a normal dinner table.\n\nSo the idea evolved more or less into this: you are sitting a table. You have your own plate, with is your \u201cbase\u201d. There are 5 other guests at the table, each with their own plate.\n\nYour plate can spawn little pieces of pasta. You do so by \u201cordering\u201d them through a menu. Some pastas are better than others; some are faster, some are stronger. They have varying costs, which are debited from your credits (you start with a number of credits).\n\nOnce spawned, your pastas start flying around. Their instinct is to fly to other plates, in order to conquer them (the objective of the game is having your pasta conquer all the plates on the table). But they are really autonomous, so after being spawned, you have no control over your pasta (think DotA or LoL creeps).\n\nYour pasta doesn\u2019t like other people\u2019s pasta, so if they meet, they shoot sauce at each other until one dies. You get credits for other pastas your own pasta kill.\n\nOnce a pasta is in the vicinity of a plate, it starts conquering it for its team. It takes around 10 seconds for a plate to be conquered; less if more pasta from the same team are around. If pasta from other team are around, though, they get locked down in their attempt, unable to conquer the plate, until one of them die (think Battlefield\u2019s standard \u201cConquest\u201d mode).\n\nYou get points every second for every plate you own.\n\nOver time, the concept also evolved to use an Italian bistro as its main scenario.\n\nCarlos, Carlos\u2019 Bistro\u2019s founder and owner\n\nSetup\n\nNo major changes were made from my work setup. I used FDT and Starling creating an Adobe AIR (ActionScript) project, all tools or frameworks I already had some knowledge with.\n\nOne big change for me was that I livestreamed my work through a twitch.tv account. This was a new thing for me. As recommended by Roushey, I used a program called XSplit and I got to say, it is pretty amazing. It made the livestream pretty effortless and the features are awesome, even for the free version. It was great to have some of my friends watch me, and then interact with them and random people through chat. It was also good knowing that I was also recording a local version of the files, so I could make a timelapse video later.\n\nKnowing the video was being recorded also made me a lot more self-conscious about my computer use, as if someone was watching over my shoulder. It made me realize that sometimes I spend too much time in seemingly inane tasks (I ended up wasting the longest time just to get some text alignment the way I wanted \u2013 it\u2019ll probably drive someone crazy if they watch it) and that I do way too many typos where writing code. I pretty much spend half of the time writing a line and the other half fixing the crazy characters in it.\n\nMy own stream was probably boring to watch since I was coding for the most time. But livestreaming is one of the cool things to do as a spectator too. It was great seeing other people working \u2013 I had a few tabs opened on my second monitor all the time. It\u2019s actually a bit sad, because if I could, I could have spent the whole weekend just watching other people working! But I had to do my own work, so I\u2019d only do it once in a while, when resting for a bit.\n\nDesign\n\nAlthough I wanted some simple, low-fi, high-contrast kind of design, I ended up going with somewhat realistic (vector) art. I think it worked very well, fitting the mood of the game, but I also went overboard.\n\nFor example: to know the state of a plate (who owns it, who\u2019s conquering it and how much time they have left before conquering it, which pasta units are in the queue, etc), you have to look at the plate\u2019s bill.\n\nThe problem I realized when doing some tests is that people never look at the bill! They think it\u2019s some kind of prop, so they never actually read its details.\n\nPlus, if you\u2019re zoomed out too much, you can\u2019t actually read it, so it\u2019s hard to know what\u2019s going on with the game until you zoom in to the area of a specific plate.\n\nOne other solution that didn\u2019t turn out to be as perfect as I thought was how to indicate who a plate base belongs to. In the game, that\u2019s indicated by the plate\u2019s decoration \u2013 its color denotes the team owner. But it\u2019s something that fits so well into the design that people never realized it, until they were told about it.\n\nIn the end, the idea of going with a full physical metaphor is one that should be done with care. Things that are very important risk becoming background noise, unless the player knows its importance.\n\nOriginally, I wanted to avoid any kind of heads-up display in my game. In the end, I ended up adding it at the bottom to indicate your credits and bases owned, as well as the hideous out-of-place-and-still-not-obvious \u201cCall Waiter\u201d button. But in hindsight, I should have gone with a simple HUD from the start, especially one that indicated each team\u2019s colors and general state of the game without the need for zooming in and out.\n\nDevelopment\n\nDevelopment went fast. But not fast enough.\n\nEven though I worked around 32+ hours for this Ludum Dare, the biggest problem I had to face in the end was overscoping. I had too much planned, and couldn\u2019t get it all done.\n\nContent-wise, I had several kinds of pasta planned (Wikipedia is just amazing in that regard), split into several different groups, from small Pastina to huge Pasta al forno. But because of time constraints, I ended up scratching most of them, and ended up with 5 different types of very small pasta \u2013 barely something to start when talking about the evolution of Pasta.\n\nPastas used in the game. Unfortunately, the macs where never used\n\nWhich is one of the saddest things about the project, really. It had the framework and the features to allow an endless number of elements in there, but I just didn\u2019t have time to draw the rest of the assets needed (something I loved to do, by the way).\n\nOther non-obvious features had to be dropped, too. For example, when ordering some pasta, you were supposed to select what kind of sauce you\u2019d like with your pasta, each with different attributes. Bolognese, for example, is very strong, but inaccurate; Pesto is very accurate and has great range, but it\u2019s weaker; and my favorite, Vodka, would triggers 10% loss of speed on the pasta hit by it.\n\nThe code for that is mostly in there. But in the end, I didn\u2019t have time to implement the sauce selection interface; all pasta ended up using bolognese sauce.\n\nTo-do list: lots of things were not done\n\nActual programming also took a toll in the development time. Having been programming for a while, I like to believe I got to a point where I know how to make things right, but at the expense of forgetting how to do things wrong in a seemingly good way. What I mean is that I had to take a lot of shortcuts in my code to save time (e.g. a lot of singletons references for cross-communication rather than events or observers, all-encompassing check loops, not fast enough) that left a very sour taste in my mouth. While I know I used to do those a few years ago and survive, I almost cannot accept the state my code is in right now.\n\nAt the same time, I do know it was the right thing to do given the timeframe.\n\nOne small thing that had some impact was using a somewhat new platform for me. That\u2019s Starling, the accelerated graphics framework I used in Flash. I had tested it before and I knew how to use it well \u2013 the API is very similar to Flash itself. However, there were some small details that had some impact during development, making me feel somewhat uneasy the whole time I was writing the game. It was, again, the right thing to do, but I should have used Starling more deeply before (which is the conundrum: I used it for Ludum Dare just so I could learn more about it).\n\nArgument and user experience\n\nOne final aspect of the game that I learned is that making the game obvious for your players goes a long way into making it fun. If you have to spend the longest time explaining things, your game is doing something wrong.\n\nAnd that\u2019s exactly the problem Survival of the Tastiest ultimately faced. It\u2019s very hard for people to understand what\u2019s going on with the game, why, and how. I did have some introductory text at the beginning, but that was a last-minute thing. More importantly, I should have had a better interface or simplified the whole concept so it would be easier for people to understand.\n\nThat doesn\u2019t mean the game itself should be simple. It just means that the experience and interface should be approachable and understandable.\n\nConclusion\n\nI\u2019m extremely happy with what I\u2019ve done and, especially given that this was my first Ludum Dare. However, I feel like I\u2019ve learned a lot of what not to do.\n\nThe biggest problem is overscoping. Like Eric Decker said, the biggest lesson we can learn with this is probably with scoping \u2013 deciding what to do beforehand in a way you can complete it without having to rush and do something half-assed.\n\nI\u2019m sure I will do more Ludum Dares in the future. But if there are any lessons I can take of it, they are to make it simple, to use frameworks and platforms you already have some absolute experience with (otherwise you\u2019ll spend too much time trying to solve easy questions), and to scope for a game that you can complete in one day only (that way, you can actually take two days and make it cool).\n\nThis entry was posted\non Monday, August 27th, 2012 at 10:54 am and is filed under LD #24.\nYou can follow any responses to this entry through the RSS 2.0 feed.\nYou can skip to the end and leave a response. Pinging is currently not allowed.\n\n3 Responses to \u201c\u201cSurvival of the Tastiest\u201d Post-mortem\u201d\n\ndarn it , knowing that I missed your livestream makes me a sad panda ;( but more to the point, the game is \u2026 well for a startup its original to say the least ;D it has some really neat ideas and more importantly its designed arround touch screens whitch by the looks of the submission is something rare ;o or that could be just me and my short memory -_-! awesum game, love et <3",
+  "multi": {
+    "Survival": {
+      "tokens": [
+        "Surv",
+        "ival"
+      ],
+      "positions": [
+        2776,
+        2777
+      ]
+    },
+    "Tastiest": {
+      "tokens": [
+        "T",
+        "ast",
+        "iest"
+      ],
+      "positions": [
+        2780,
+        2781,
+        2782
+      ]
+    },
+    "confusing": {
+      "tokens": [
+        "conf",
+        "using"
+      ],
+      "positions": [
+        50,
+        51
+      ]
+    },
+    "insted": {
+      "tokens": [
+        "inst",
+        "ed"
+      ],
+      "positions": [
+        74,
+        75
+      ]
+    },
+    "typical": {
+      "tokens": [
+        "typ",
+        "ical"
+      ],
+      "positions": [
+        79,
+        80
+      ]
+    },
+    "hardest": {
+      "tokens": [
+        "har",
+        "dest"
+      ],
+      "positions": [
+        98,
+        99
+      ]
+    },
+    "gameplay": {
+      "tokens": [
+        "game",
+        "play"
+      ],
+      "positions": [
+        471,
+        472
+      ]
+    },
+    "enemies": {
+      "tokens": [
+        "en",
+        "emies"
+      ],
+      "positions": [
+        130,
+        131
+      ]
+    },
+    "confident": {
+      "tokens": [
+        "conf",
+        "ident"
+      ],
+      "positions": [
+        153,
+        154
+      ]
+    },
+    "Evolution": {
+      "tokens": [
+        "Ev",
+        "olution"
+      ],
+      "positions": [
+        174,
+        175
+      ]
+    },
+    "evolution": {
+      "tokens": [
+        "ev",
+        "olution"
+      ],
+      "positions": [
+        2160,
+        2161
+      ]
+    },
+    "unassisted": {
+      "tokens": [
+        "un",
+        "ass",
+        "isted"
+      ],
+      "positions": [
+        185,
+        186,
+        187
+      ]
+    },
+    "happens": {
+      "tokens": [
+        "h",
+        "app",
+        "ens"
+      ],
+      "positions": [
+        190,
+        191,
+        192
+      ]
+    },
+    "several": {
+      "tokens": [
+        "se",
+        "veral"
+      ],
+      "positions": [
+        2105,
+        2106
+      ]
+    },
+    "seemingly": {
+      "tokens": [
+        "se",
+        "em",
+        "ingly"
+      ],
+      "positions": [
+        2452,
+        2453,
+        2454
+      ]
+    },
+    "permutation": {
+      "tokens": [
+        "per",
+        "mutation"
+      ],
+      "positions": [
+        208,
+        209
+      ]
+    },
+    "surviving": {
+      "tokens": [
+        "sur",
+        "v",
+        "iving"
+      ],
+      "positions": [
+        210,
+        211,
+        212
+      ]
+    },
+    "genetic": {
+      "tokens": [
+        "gen",
+        "etic"
+      ],
+      "positions": [
+        215,
+        216
+      ]
+    },
+    "simulator": {
+      "tokens": [
+        "sim",
+        "ulator"
+      ],
+      "positions": [
+        393,
+        394
+      ]
+    },
+    "opinion": {
+      "tokens": [
+        "op",
+        "inion"
+      ],
+      "positions": [
+        224,
+        225
+      ]
+    },
+    "facing": {
+      "tokens": [
+        "f",
+        "acing"
+      ],
+      "positions": [
+        237,
+        238
+      ]
+    },
+    "goes": {
+      "tokens": [
+        "go",
+        "es"
+      ],
+      "positions": [
+        2737,
+        2738
+      ]
+    },
+    "supposed": {
+      "tokens": [
+        "sup",
+        "posed"
+      ],
+      "positions": [
+        2267,
+        2268
+      ]
+    },
+    "evolve": {
+      "tokens": [
+        "ev",
+        "olve"
+      ],
+      "positions": [
+        762,
+        763
+      ]
+    },
+    "anymore": {
+      "tokens": [
+        "an",
+        "ym",
+        "ore"
+      ],
+      "positions": [
+        296,
+        297,
+        298
+      ]
+    },
+    "equivalent": {
+      "tokens": [
+        "equ",
+        "ivalent"
+      ],
+      "positions": [
+        304,
+        305
+      ]
+    },
+    "intelligent": {
+      "tokens": [
+        "int",
+        "elligent"
+      ],
+      "positions": [
+        389,
+        390
+      ]
+    },
+    "fable": {
+      "tokens": [
+        "f",
+        "able"
+      ],
+      "positions": [
+        312,
+        313
+      ]
+    },
+    "invented": {
+      "tokens": [
+        "in",
+        "vented"
+      ],
+      "positions": [
+        314,
+        315
+      ]
+    },
+    "creationists": {
+      "tokens": [
+        "creation",
+        "ists"
+      ],
+      "positions": [
+        317,
+        318
+      ]
+    },
+    "Pastafarian": {
+      "tokens": [
+        "Past",
+        "af",
+        "arian"
+      ],
+      "positions": [
+        332,
+        333,
+        334
+      ]
+    },
+    "rubbed": {
+      "tokens": [
+        "rub",
+        "bed"
+      ],
+      "positions": [
+        342,
+        343
+      ]
+    },
+    "Hence": {
+      "tokens": [
+        "H",
+        "ence"
+      ],
+      "positions": [
+        349,
+        350
+      ]
+    },
+    "biggest": {
+      "tokens": [
+        "big",
+        "gest"
+      ],
+      "positions": [
+        2954,
+        2955
+      ]
+    },
+    "dillema": {
+      "tokens": [
+        "d",
+        "ille",
+        "ma"
+      ],
+      "positions": [
+        355,
+        356,
+        357
+      ]
+    },
+    "deciding": {
+      "tokens": [
+        "dec",
+        "iding"
+      ],
+      "positions": [
+        2968,
+        2969
+      ]
+    },
+    "wrongly": {
+      "tokens": [
+        "wrong",
+        "ly"
+      ],
+      "positions": [
+        396,
+        397
+      ]
+    },
+    "contestant": {
+      "tokens": [
+        "contest",
+        "ant"
+      ],
+      "positions": [
+        413,
+        414
+      ]
+    },
+    "judging": {
+      "tokens": [
+        "jud",
+        "ging"
+      ],
+      "positions": [
+        421,
+        422
+      ]
+    },
+    "artificial": {
+      "tokens": [
+        "art",
+        "ificial"
+      ],
+      "positions": [
+        449,
+        450
+      ]
+    },
+    "somehow": {
+      "tokens": [
+        "some",
+        "how"
+      ],
+      "positions": [
+        662,
+        663
+      ]
+    },
+    "Alas": {
+      "tokens": [
+        "Al",
+        "as"
+      ],
+      "positions": [
+        474,
+        475
+      ]
+    },
+    "decided": {
+      "tokens": [
+        "dec",
+        "ided"
+      ],
+      "positions": [
+        698,
+        699
+      ]
+    },
+    "myself": {
+      "tokens": [
+        "my",
+        "self"
+      ],
+      "positions": [
+        502,
+        503
+      ]
+    },
+    "humanity": {
+      "tokens": [
+        "human",
+        "ity"
+      ],
+      "positions": [
+        521,
+        522
+      ]
+    },
+    "tried": {
+      "tokens": [
+        "tr",
+        "ied"
+      ],
+      "positions": [
+        523,
+        524
+      ]
+    },
+    "foe": {
+      "tokens": [
+        "fo",
+        "e"
+      ],
+      "positions": [
+        537,
+        538
+      ]
+    },
+    "souls": {
+      "tokens": [
+        "s",
+        "ou",
+        "ls"
+      ],
+      "positions": [
+        555,
+        556,
+        557
+      ]
+    },
+    "flying": {
+      "tokens": [
+        "f",
+        "lying"
+      ],
+      "positions": [
+        924,
+        925
+      ]
+    },
+    "towards": {
+      "tokens": [
+        "t",
+        "owards"
+      ],
+      "positions": [
+        562,
+        563
+      ]
+    },
+    "monolith": {
+      "tokens": [
+        "mon",
+        "olith"
+      ],
+      "positions": [
+        565,
+        566
+      ]
+    },
+    "Odyssey": {
+      "tokens": [
+        "Od",
+        "yssey"
+      ],
+      "positions": [
+        580,
+        581
+      ]
+    },
+    "compelling": {
+      "tokens": [
+        "comp",
+        "elling"
+      ],
+      "positions": [
+        592,
+        593
+      ]
+    },
+    "mechanics": {
+      "tokens": [
+        "me",
+        "chan",
+        "ics"
+      ],
+      "positions": [
+        599,
+        600,
+        601
+      ]
+    },
+    "Borgs": {
+      "tokens": [
+        "B",
+        "org",
+        "s"
+      ],
+      "positions": [
+        605,
+        606,
+        607
+      ]
+    },
+    "inspiration": {
+      "tokens": [
+        "ins",
+        "piration"
+      ],
+      "positions": [
+        611,
+        612
+      ]
+    },
+    "hypothesis": {
+      "tokens": [
+        "h",
+        "ypo",
+        "thesis"
+      ],
+      "positions": [
+        617,
+        618,
+        619
+      ]
+    },
+    "fighting": {
+      "tokens": [
+        "fight",
+        "ing"
+      ],
+      "positions": [
+        642,
+        643
+      ]
+    },
+    "Borg": {
+      "tokens": [
+        "B",
+        "org"
+      ],
+      "positions": [
+        645,
+        646
+      ]
+    },
+    "girlfriend": {
+      "tokens": [
+        "girl",
+        "friend"
+      ],
+      "positions": [
+        658,
+        659
+      ]
+    },
+    "gave": {
+      "tokens": [
+        "g",
+        "ave"
+      ],
+      "positions": [
+        664,
+        665
+      ]
+    },
+    "Pasta": {
+      "tokens": [
+        "P",
+        "asta"
+      ],
+      "positions": [
+        2163,
+        2164
+      ]
+    },
+    "sounded": {
+      "tokens": [
+        "s",
+        "ounded"
+      ],
+      "positions": [
+        689,
+        690
+      ]
+    },
+    "Conversations": {
+      "tokens": [
+        "Con",
+        "versations"
+      ],
+      "positions": [
+        705,
+        706
+      ]
+    },
+    "inspiring": {
+      "tokens": [
+        "ins",
+        "piring"
+      ],
+      "positions": [
+        709,
+        710
+      ]
+    },
+    "Roushey": {
+      "tokens": [
+        "R",
+        "ous",
+        "hey"
+      ],
+      "positions": [
+        1250,
+        1251,
+        1252
+      ]
+    },
+    "Mechanical": {
+      "tokens": [
+        "Mech",
+        "anical"
+      ],
+      "positions": [
+        723,
+        724
+      ]
+    },
+    "Underdogs": {
+      "tokens": [
+        "Under",
+        "dogs"
+      ],
+      "positions": [
+        725,
+        726
+      ]
+    },
+    "further": {
+      "tokens": [
+        "f",
+        "urther"
+      ],
+      "positions": [
+        734,
+        735
+      ]
+    },
+    "matured": {
+      "tokens": [
+        "m",
+        "ature",
+        "d"
+      ],
+      "positions": [
+        736,
+        737,
+        738
+      ]
+    },
+    "involved": {
+      "tokens": [
+        "inv",
+        "olved"
+      ],
+      "positions": [
+        744,
+        745
+      ]
+    },
+    "pasta": {
+      "tokens": [
+        "p",
+        "asta"
+      ],
+      "positions": [
+        2377,
+        2378
+      ]
+    },
+    "became": {
+      "tokens": [
+        "bec",
+        "ame"
+      ],
+      "positions": [
+        766,
+        767
+      ]
+    },
+    "Spaghetti": {
+      "tokens": [
+        "Sp",
+        "aghetti"
+      ],
+      "positions": [
+        788,
+        789
+      ]
+    },
+    "evolving": {
+      "tokens": [
+        "ev",
+        "olving"
+      ],
+      "positions": [
+        796,
+        797
+      ]
+    },
+    "dinner": {
+      "tokens": [
+        "d",
+        "inner"
+      ],
+      "positions": [
+        801,
+        802
+      ]
+    },
+    "evolved": {
+      "tokens": [
+        "ev",
+        "olved"
+      ],
+      "positions": [
+        1152,
+        1153
+      ]
+    },
+    "sitting": {
+      "tokens": [
+        "s",
+        "itting"
+      ],
+      "positions": [
+        818,
+        819
+      ]
+    },
+    "guests": {
+      "tokens": [
+        "guest",
+        "s"
+      ],
+      "positions": [
+        840,
+        841
+      ]
+    },
+    "pastas": {
+      "tokens": [
+        "past",
+        "as"
+      ],
+      "positions": [
+        1033,
+        1034
+      ]
+    },
+    "faster": {
+      "tokens": [
+        "f",
+        "aster"
+      ],
+      "positions": [
+        884,
+        885
+      ]
+    },
+    "stronger": {
+      "tokens": [
+        "strong",
+        "er"
+      ],
+      "positions": [
+        889,
+        890
+      ]
+    },
+    "varying": {
+      "tokens": [
+        "vary",
+        "ing"
+      ],
+      "positions": [
+        894,
+        895
+      ]
+    },
+    "costs": {
+      "tokens": [
+        "cost",
+        "s"
+      ],
+      "positions": [
+        896,
+        897
+      ]
+    },
+    "debited": {
+      "tokens": [
+        "deb",
+        "ited"
+      ],
+      "positions": [
+        901,
+        902
+      ]
+    },
+    "spawned": {
+      "tokens": [
+        "spawn",
+        "ed"
+      ],
+      "positions": [
+        975,
+        976
+      ]
+    },
+    "instinct": {
+      "tokens": [
+        "inst",
+        "inct"
+      ],
+      "positions": [
+        929,
+        930
+      ]
+    },
+    "conquer": {
+      "tokens": [
+        "con",
+        "quer"
+      ],
+      "positions": [
+        1111,
+        1112
+      ]
+    },
+    "autonomous": {
+      "tokens": [
+        "aut",
+        "onomous"
+      ],
+      "positions": [
+        969,
+        970
+      ]
+    },
+    "DotA": {
+      "tokens": [
+        "Dot",
+        "A"
+      ],
+      "positions": [
+        988,
+        989
+      ]
+    },
+    "LoL": {
+      "tokens": [
+        "Lo",
+        "L"
+      ],
+      "positions": [
+        991,
+        992
+      ]
+    },
+    "creeps": {
+      "tokens": [
+        "cre",
+        "eps"
+      ],
+      "positions": [
+        993,
+        994
+      ]
+    },
+    "sauce": {
+      "tokens": [
+        "s",
+        "auce"
+      ],
+      "positions": [
+        2386,
+        2387
+      ]
+    },
+    "dies": {
+      "tokens": [
+        "d",
+        "ies"
+      ],
+      "positions": [
+        1025,
+        1026
+      ]
+    },
+    "vicinity": {
+      "tokens": [
+        "vic",
+        "inity"
+      ],
+      "positions": [
+        1048,
+        1049
+      ]
+    },
+    "conquering": {
+      "tokens": [
+        "con",
+        "qu",
+        "ering"
+      ],
+      "positions": [
+        1673,
+        1674,
+        1675
+      ]
+    },
+    "conquered": {
+      "tokens": [
+        "con",
+        "qu",
+        "ered"
+      ],
+      "positions": [
+        1074,
+        1075,
+        1076
+      ]
+    },
+    "Battlefield": {
+      "tokens": [
+        "Battle",
+        "field"
+      ],
+      "positions": [
+        1123,
+        1124
+      ]
+    },
+    "Conquest": {
+      "tokens": [
+        "Con",
+        "quest"
+      ],
+      "positions": [
+        1129,
+        1130
+      ]
+    },
+    "bistro": {
+      "tokens": [
+        "b",
+        "istro"
+      ],
+      "positions": [
+        1158,
+        1159
+      ]
+    },
+    "Bistro": {
+      "tokens": [
+        "B",
+        "istro"
+      ],
+      "positions": [
+        1169,
+        1170
+      ]
+    },
+    "founder": {
+      "tokens": [
+        "found",
+        "er"
+      ],
+      "positions": [
+        1173,
+        1174
+      ]
+    },
+    "FDT": {
+      "tokens": [
+        "F",
+        "DT"
+      ],
+      "positions": [
+        1190,
+        1191
+      ]
+    },
+    "Starling": {
+      "tokens": [
+        "Star",
+        "ling"
+      ],
+      "positions": [
+        2680,
+        2681
+      ]
+    },
+    "ActionScript": {
+      "tokens": [
+        "Action",
+        "Script"
+      ],
+      "positions": [
+        1200,
+        1201
+      ]
+    },
+    "frameworks": {
+      "tokens": [
+        "framework",
+        "s"
+      ],
+      "positions": [
+        3031,
+        3032
+      ]
+    },
+    "livestreamed": {
+      "tokens": [
+        "liv",
+        "est",
+        "ream",
+        "ed"
+      ],
+      "positions": [
+        1225,
+        1226,
+        1227,
+        1228
+      ]
+    },
+    "twitch": {
+      "tokens": [
+        "t",
+        "witch"
+      ],
+      "positions": [
+        1233,
+        1234
+      ]
+    },
+    "XSplit": {
+      "tokens": [
+        "X",
+        "Split"
+      ],
+      "positions": [
+        1259,
+        1260
+      ]
+    },
+    "amazing": {
+      "tokens": [
+        "am",
+        "azing"
+      ],
+      "positions": [
+        2095,
+        2096
+      ]
+    },
+    "livestream": {
+      "tokens": [
+        "liv",
+        "est",
+        "ream"
+      ],
+      "positions": [
+        1276,
+        1277,
+        1278
+      ]
+    },
+    "effortless": {
+      "tokens": [
+        "eff",
+        "ort",
+        "less"
+      ],
+      "positions": [
+        1280,
+        1281,
+        1282
+      ]
+    },
+    "interact": {
+      "tokens": [
+        "inter",
+        "act"
+      ],
+      "positions": [
+        1309,
+        1310
+      ]
+    },
+    "knowing": {
+      "tokens": [
+        "know",
+        "ing"
+      ],
+      "positions": [
+        1323,
+        1324
+      ]
+    },
+    "recording": {
+      "tokens": [
+        "rec",
+        "ording"
+      ],
+      "positions": [
+        1329,
+        1330
+      ]
+    },
+    "timelapse": {
+      "tokens": [
+        "tim",
+        "el",
+        "apse"
+      ],
+      "positions": [
+        1343,
+        1344,
+        1345
+      ]
+    },
+    "recorded": {
+      "tokens": [
+        "record",
+        "ed"
+      ],
+      "positions": [
+        1354,
+        1355
+      ]
+    },
+    "watching": {
+      "tokens": [
+        "watch",
+        "ing"
+      ],
+      "positions": [
+        1554,
+        1555
+      ]
+    },
+    "shoulder": {
+      "tokens": [
+        "should",
+        "er"
+      ],
+      "positions": [
+        1378,
+        1379
+      ]
+    },
+    "realize": {
+      "tokens": [
+        "real",
+        "ize"
+      ],
+      "positions": [
+        1384,
+        1385
+      ]
+    },
+    "spend": {
+      "tokens": [
+        "sp",
+        "end"
+      ],
+      "positions": [
+        3048,
+        3049
+      ]
+    },
+    "inane": {
+      "tokens": [
+        "in",
+        "ane"
+      ],
+      "positions": [
+        1398,
+        1399
+      ]
+    },
+    "wasting": {
+      "tokens": [
+        "w",
+        "asting"
+      ],
+      "positions": [
+        1405,
+        1406
+      ]
+    },
+    "longest": {
+      "tokens": [
+        "long",
+        "est"
+      ],
+      "positions": [
+        2754,
+        2755
+      ]
+    },
+    "crazy": {
+      "tokens": [
+        "c",
+        "razy"
+      ],
+      "positions": [
+        1467,
+        1468
+      ]
+    },
+    "typos": {
+      "tokens": [
+        "ty",
+        "pos"
+      ],
+      "positions": [
+        1442,
+        1443
+      ]
+    },
+    "fixing": {
+      "tokens": [
+        "fix",
+        "ing"
+      ],
+      "positions": [
+        1464,
+        1465
+      ]
+    },
+    "boring": {
+      "tokens": [
+        "b",
+        "oring"
+      ],
+      "positions": [
+        1478,
+        1479
+      ]
+    },
+    "livestreaming": {
+      "tokens": [
+        "liv",
+        "est",
+        "ream",
+        "ing"
+      ],
+      "positions": [
+        1492,
+        1493,
+        1494,
+        1495
+      ]
+    },
+    "spectator": {
+      "tokens": [
+        "spect",
+        "ator"
+      ],
+      "positions": [
+        1506,
+        1507
+      ]
+    },
+    "weekend": {
+      "tokens": [
+        "week",
+        "end"
+      ],
+      "positions": [
+        1551,
+        1552
+      ]
+    },
+    "resting": {
+      "tokens": [
+        "rest",
+        "ing"
+      ],
+      "positions": [
+        1582,
+        1583
+      ]
+    },
+    "somewhat": {
+      "tokens": [
+        "som",
+        "ewhat"
+      ],
+      "positions": [
+        2651,
+        2652
+      ]
+    },
+    "realistic": {
+      "tokens": [
+        "real",
+        "istic"
+      ],
+      "positions": [
+        1613,
+        1614
+      ]
+    },
+    "fitting": {
+      "tokens": [
+        "fit",
+        "ting"
+      ],
+      "positions": [
+        1627,
+        1628
+      ]
+    },
+    "mood": {
+      "tokens": [
+        "m",
+        "ood"
+      ],
+      "positions": [
+        1630,
+        1631
+      ]
+    },
+    "overboard": {
+      "tokens": [
+        "over",
+        "board"
+      ],
+      "positions": [
+        1640,
+        1641
+      ]
+    },
+    "realized": {
+      "tokens": [
+        "real",
+        "ized"
+      ],
+      "positions": [
+        1852,
+        1853
+      ]
+    },
+    "zoomed": {
+      "tokens": [
+        "zoom",
+        "ed"
+      ],
+      "positions": [
+        1743,
+        1744
+      ]
+    },
+    "indicate": {
+      "tokens": [
+        "ind",
+        "icate"
+      ],
+      "positions": [
+        1938,
+        1939
+      ]
+    },
+    "indicated": {
+      "tokens": [
+        "ind",
+        "icated"
+      ],
+      "positions": [
+        1993,
+        1994
+      ]
+    },
+    "decoration": {
+      "tokens": [
+        "de",
+        "coration"
+      ],
+      "positions": [
+        1826,
+        1827
+      ]
+    },
+    "denotes": {
+      "tokens": [
+        "den",
+        "otes"
+      ],
+      "positions": [
+        1831,
+        1832
+      ]
+    },
+    "told": {
+      "tokens": [
+        "t",
+        "old"
+      ],
+      "positions": [
+        1859,
+        1860
+      ]
+    },
+    "metaphor": {
+      "tokens": [
+        "met",
+        "aph",
+        "or"
+      ],
+      "positions": [
+        1876,
+        1877,
+        1878
+      ]
+    },
+    "becoming": {
+      "tokens": [
+        "bec",
+        "oming"
+      ],
+      "positions": [
+        1894,
+        1895
+      ]
+    },
+    "knows": {
+      "tokens": [
+        "know",
+        "s"
+      ],
+      "positions": [
+        1902,
+        1903
+      ]
+    },
+    "importance": {
+      "tokens": [
+        "import",
+        "ance"
+      ],
+      "positions": [
+        1905,
+        1906
+      ]
+    },
+    "hideous": {
+      "tokens": [
+        "hide",
+        "ous"
+      ],
+      "positions": [
+        1950,
+        1951
+      ]
+    },
+    "Waiter": {
+      "tokens": [
+        "Wait",
+        "er"
+      ],
+      "positions": [
+        1968,
+        1969
+      ]
+    },
+    "hindsight": {
+      "tokens": [
+        "h",
+        "indsight"
+      ],
+      "positions": [
+        1975,
+        1976
+      ]
+    },
+    "zooming": {
+      "tokens": [
+        "zoom",
+        "ing"
+      ],
+      "positions": [
+        2010,
+        2011
+      ]
+    },
+    "enough": {
+      "tokens": [
+        "en",
+        "ough"
+      ],
+      "positions": [
+        2510,
+        2511
+      ]
+    },
+    "Ludum": {
+      "tokens": [
+        "L",
+        "ud",
+        "um"
+      ],
+      "positions": [
+        3001,
+        3002,
+        3003
+      ]
+    },
+    "Dare": {
+      "tokens": [
+        "D",
+        "are"
+      ],
+      "positions": [
+        2917,
+        2918
+      ]
+    },
+    "overscoping": {
+      "tokens": [
+        "overs",
+        "c",
+        "oping"
+      ],
+      "positions": [
+        2943,
+        2944,
+        2945
+      ]
+    },
+    "planned": {
+      "tokens": [
+        "pl",
+        "anned"
+      ],
+      "positions": [
+        2088,
+        2089
+      ]
+    },
+    "kinds": {
+      "tokens": [
+        "k",
+        "inds"
+      ],
+      "positions": [
+        2083,
+        2084
+      ]
+    },
+    "Wikipedia": {
+      "tokens": [
+        "W",
+        "ikipedia"
+      ],
+      "positions": [
+        2091,
+        2092
+      ]
+    },
+    "regard": {
+      "tokens": [
+        "reg",
+        "ard"
+      ],
+      "positions": [
+        2099,
+        2100
+      ]
+    },
+    "Pastina": {
+      "tokens": [
+        "Past",
+        "ina"
+      ],
+      "positions": [
+        2112,
+        2113
+      ]
+    },
+    "forno": {
+      "tokens": [
+        "f",
+        "orno"
+      ],
+      "positions": [
+        2119,
+        2120
+      ]
+    },
+    "scratching": {
+      "tokens": [
+        "scr",
+        "atching"
+      ],
+      "positions": [
+        2131,
+        2132
+      ]
+    },
+    "barely": {
+      "tokens": [
+        "bare",
+        "ly"
+      ],
+      "positions": [
+        2150,
+        2151
+      ]
+    },
+    "talking": {
+      "tokens": [
+        "t",
+        "alking"
+      ],
+      "positions": [
+        2156,
+        2157
+      ]
+    },
+    "Pastas": {
+      "tokens": [
+        "Past",
+        "as"
+      ],
+      "positions": [
+        2166,
+        2167
+      ]
+    },
+    "macs": {
+      "tokens": [
+        "mac",
+        "s"
+      ],
+      "positions": [
+        2176,
+        2177
+      ]
+    },
+    "saddest": {
+      "tokens": [
+        "sad",
+        "dest"
+      ],
+      "positions": [
+        2186,
+        2187
+      ]
+    },
+    "endless": {
+      "tokens": [
+        "end",
+        "less"
+      ],
+      "positions": [
+        2205,
+        2206
+      ]
+    },
+    "loved": {
+      "tokens": [
+        "lo",
+        "ved"
+      ],
+      "positions": [
+        2232,
+        2233
+      ]
+    },
+    "dropped": {
+      "tokens": [
+        "dro",
+        "pped"
+      ],
+      "positions": [
+        2251,
+        2252
+      ]
+    },
+    "Bolognese": {
+      "tokens": [
+        "B",
+        "olog",
+        "n",
+        "ese"
+      ],
+      "positions": [
+        2290,
+        2291,
+        2292,
+        2293
+      ]
+    },
+    "inaccurate": {
+      "tokens": [
+        "in",
+        "accur",
+        "ate"
+      ],
+      "positions": [
+        2303,
+        2304,
+        2305
+      ]
+    },
+    "Pesto": {
+      "tokens": [
+        "P",
+        "esto"
+      ],
+      "positions": [
+        2307,
+        2308
+      ]
+    },
+    "accurate": {
+      "tokens": [
+        "accur",
+        "ate"
+      ],
+      "positions": [
+        2311,
+        2312
+      ]
+    },
+    "weaker": {
+      "tokens": [
+        "we",
+        "aker"
+      ],
+      "positions": [
+        2322,
+        2323
+      ]
+    },
+    "Vodka": {
+      "tokens": [
+        "V",
+        "odka"
+      ],
+      "positions": [
+        2329,
+        2330
+      ]
+    },
+    "triggers": {
+      "tokens": [
+        "tr",
+        "iggers"
+      ],
+      "positions": [
+        2333,
+        2334
+      ]
+    },
+    "bolognese": {
+      "tokens": [
+        "b",
+        "olog",
+        "n",
+        "ese"
+      ],
+      "positions": [
+        2382,
+        2383,
+        2384,
+        2385
+      ]
+    },
+    "toll": {
+      "tokens": [
+        "t",
+        "oll"
+      ],
+      "positions": [
+        2405,
+        2406
+      ]
+    },
+    "believe": {
+      "tokens": [
+        "bel",
+        "ieve"
+      ],
+      "positions": [
+        2422,
+        2423
+      ]
+    },
+    "forgetting": {
+      "tokens": [
+        "forget",
+        "ting"
+      ],
+      "positions": [
+        2443,
+        2444
+      ]
+    },
+    "shortcuts": {
+      "tokens": [
+        "short",
+        "cuts"
+      ],
+      "positions": [
+        2470,
+        2471
+      ]
+    },
+    "singletons": {
+      "tokens": [
+        "single",
+        "tons"
+      ],
+      "positions": [
+        2486,
+        2487
+      ]
+    },
+    "observers": {
+      "tokens": [
+        "obs",
+        "ervers"
+      ],
+      "positions": [
+        2497,
+        2498
+      ]
+    },
+    "sour": {
+      "tokens": [
+        "s",
+        "our"
+      ],
+      "positions": [
+        2517,
+        2518
+      ]
+    },
+    "taste": {
+      "tokens": [
+        "t",
+        "aste"
+      ],
+      "positions": [
+        2519,
+        2520
+      ]
+    },
+    "survive": {
+      "tokens": [
+        "sur",
+        "v",
+        "ive"
+      ],
+      "positions": [
+        2538,
+        2539,
+        2540
+      ]
+    },
+    "timeframe": {
+      "tokens": [
+        "time",
+        "frame"
+      ],
+      "positions": [
+        2572,
+        2573
+      ]
+    },
+    "accelerated": {
+      "tokens": [
+        "accel",
+        "er",
+        "ated"
+      ],
+      "positions": [
+        2599,
+        2600,
+        2601
+      ]
+    },
+    "knew": {
+      "tokens": [
+        "k",
+        "new"
+      ],
+      "positions": [
+        2616,
+        2617
+      ]
+    },
+    "itself": {
+      "tokens": [
+        "it",
+        "self"
+      ],
+      "positions": [
+        2869,
+        2870
+      ]
+    },
+    "uneasy": {
+      "tokens": [
+        "une",
+        "asy"
+      ],
+      "positions": [
+        2653,
+        2654
+      ]
+    },
+    "deeply": {
+      "tokens": [
+        "deep",
+        "ly"
+      ],
+      "positions": [
+        2683,
+        2684
+      ]
+    },
+    "conundrum": {
+      "tokens": [
+        "con",
+        "und",
+        "rum"
+      ],
+      "positions": [
+        2690,
+        2691,
+        2692
+      ]
+    },
+    "learned": {
+      "tokens": [
+        "learn",
+        "ed"
+      ],
+      "positions": [
+        2928,
+        2929
+      ]
+    },
+    "obvious": {
+      "tokens": [
+        "ob",
+        "vious"
+      ],
+      "positions": [
+        2732,
+        2733
+      ]
+    },
+    "explaining": {
+      "tokens": [
+        "expl",
+        "aining"
+      ],
+      "positions": [
+        2757,
+        2758
+      ]
+    },
+    "exactly": {
+      "tokens": [
+        "ex",
+        "actly"
+      ],
+      "positions": [
+        2772,
+        2773
+      ]
+    },
+    "ultimately": {
+      "tokens": [
+        "ult",
+        "imately"
+      ],
+      "positions": [
+        2783,
+        2784
+      ]
+    },
+    "faced": {
+      "tokens": [
+        "f",
+        "aced"
+      ],
+      "positions": [
+        2785,
+        2786
+      ]
+    },
+    "understand": {
+      "tokens": [
+        "under",
+        "stand"
+      ],
+      "positions": [
+        2859,
+        2860
+      ]
+    },
+    "introductory": {
+      "tokens": [
+        "intro",
+        "ductory"
+      ],
+      "positions": [
+        2816,
+        2817
+      ]
+    },
+    "beginning": {
+      "tokens": [
+        "begin",
+        "ning"
+      ],
+      "positions": [
+        2821,
+        2822
+      ]
+    },
+    "importantly": {
+      "tokens": [
+        "important",
+        "ly"
+      ],
+      "positions": [
+        2834,
+        2835
+      ]
+    },
+    "simplified": {
+      "tokens": [
+        "s",
+        "implified"
+      ],
+      "positions": [
+        2845,
+        2846
+      ]
+    },
+    "easier": {
+      "tokens": [
+        "e",
+        "asier"
+      ],
+      "positions": [
+        2854,
+        2855
+      ]
+    },
+    "approachable": {
+      "tokens": [
+        "appro",
+        "achable"
+      ],
+      "positions": [
+        2885,
+        2886
+      ]
+    },
+    "understandable": {
+      "tokens": [
+        "under",
+        "stand",
+        "able"
+      ],
+      "positions": [
+        2888,
+        2889,
+        2890
+      ]
+    },
+    "extremely": {
+      "tokens": [
+        "ext",
+        "remely"
+      ],
+      "positions": [
+        2896,
+        2897
+      ]
+    },
+    "Decker": {
+      "tokens": [
+        "De",
+        "cker"
+      ],
+      "positions": [
+        2949,
+        2950
+      ]
+    },
+    "scoping": {
+      "tokens": [
+        "sc",
+        "oping"
+      ],
+      "positions": [
+        2965,
+        2966
+      ]
+    },
+    "beforehand": {
+      "tokens": [
+        "before",
+        "hand"
+      ],
+      "positions": [
+        2973,
+        2974
+      ]
+    },
+    "Dares": {
+      "tokens": [
+        "D",
+        "ares"
+      ],
+      "positions": [
+        3004,
+        3005
+      ]
+    },
+    "platforms": {
+      "tokens": [
+        "platform",
+        "s"
+      ],
+      "positions": [
+        3034,
+        3035
+      ]
+    },
+    "filed": {
+      "tokens": [
+        "file",
+        "d"
+      ],
+      "positions": [
+        3110,
+        3111
+      ]
+    }
+  },
+  "results": {
+    "Survival": {
+      "0": {
+        "token": "Surv",
+        "position": 2776,
+        "max_attention": 0.94140625,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2860
+        ],
+        "avg_max_per_head": 0.018493898896849714
+      },
+      "1": {
+        "token": "ival",
+        "position": 2777,
+        "max_attention": 0.8046875,
+        "max_location (layer, head, row)": [
+          20,
+          21,
+          2780
+        ],
+        "avg_max_per_head": 0.024576857511419803
+      }
+    },
+    "Tastiest": {
+      "0": {
+        "token": "T",
+        "position": 2780,
+        "max_attention": 0.3984375,
+        "max_location (layer, head, row)": [
+          4,
+          8,
+          2783
+        ],
+        "avg_max_per_head": 0.011825125307950657
+      },
+      "1": {
+        "token": "ast",
+        "position": 2781,
+        "max_attention": 0.91015625,
+        "max_location (layer, head, row)": [
+          2,
+          2,
+          2784
+        ],
+        "avg_max_per_head": 0.019609578885138035
+      },
+      "2": {
+        "token": "iest",
+        "position": 2782,
+        "max_attention": 0.8203125,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          2783
+        ],
+        "avg_max_per_head": 0.02860713859263342
+      }
+    },
+    "confusing": {
+      "0": {
+        "token": "conf",
+        "position": 50,
+        "max_attention": 0.6875,
+        "max_location (layer, head, row)": [
+          6,
+          1,
+          1679
+        ],
+        "avg_max_per_head": 0.028675186447799206
+      },
+      "1": {
+        "token": "using",
+        "position": 51,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          24,
+          25,
+          53
+        ],
+        "avg_max_per_head": 0.07560141454450786
+      }
+    },
+    "insted": {
+      "0": {
+        "token": "inst",
+        "position": 74,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          6,
+          25,
+          77
+        ],
+        "avg_max_per_head": 0.07121158303925768
+      },
+      "1": {
+        "token": "ed",
+        "position": 75,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          0,
+          10,
+          76
+        ],
+        "avg_max_per_head": 0.03751361812464893
+      }
+    },
+    "typical": {
+      "0": {
+        "token": "typ",
+        "position": 79,
+        "max_attention": 0.59765625,
+        "max_location (layer, head, row)": [
+          6,
+          21,
+          81
+        ],
+        "avg_max_per_head": 0.03894895687699318
+      },
+      "1": {
+        "token": "ical",
+        "position": 80,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          9,
+          5,
+          84
+        ],
+        "avg_max_per_head": 0.09880395838990808
+      }
+    },
+    "hardest": {
+      "0": {
+        "token": "har",
+        "position": 98,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          6,
+          25,
+          101
+        ],
+        "avg_max_per_head": 0.059515259868931025
+      },
+      "1": {
+        "token": "dest",
+        "position": 99,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          1,
+          13,
+          100
+        ],
+        "avg_max_per_head": 0.04927286220481619
+      }
+    },
+    "gameplay": {
+      "0": {
+        "token": "game",
+        "position": 471,
+        "max_attention": 0.859375,
+        "max_location (layer, head, row)": [
+          6,
+          21,
+          474
+        ],
+        "avg_max_per_head": 0.0532086661842186
+      },
+      "1": {
+        "token": "play",
+        "position": 472,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          4,
+          11,
+          474
+        ],
+        "avg_max_per_head": 0.055044894077582285
+      }
+    },
+    "enemies": {
+      "0": {
+        "token": "en",
+        "position": 130,
+        "max_attention": 0.88671875,
+        "max_location (layer, head, row)": [
+          5,
+          11,
+          2129
+        ],
+        "avg_max_per_head": 0.061858660192228854
+      },
+      "1": {
+        "token": "emies",
+        "position": 131,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          4,
+          29,
+          133
+        ],
+        "avg_max_per_head": 0.09102657967014238
+      }
+    },
+    "confident": {
+      "0": {
+        "token": "conf",
+        "position": 153,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          4,
+          23,
+          168
+        ],
+        "avg_max_per_head": 0.09694807173218578
+      },
+      "1": {
+        "token": "ident",
+        "position": 154,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          28,
+          10,
+          155
+        ],
+        "avg_max_per_head": 0.05638148193247616
+      }
+    },
+    "Evolution": {
+      "0": {
+        "token": "Ev",
+        "position": 174,
+        "max_attention": 0.921875,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          182
+        ],
+        "avg_max_per_head": 0.04420513036893681
+      },
+      "1": {
+        "token": "olution",
+        "position": 175,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          6,
+          13,
+          176
+        ],
+        "avg_max_per_head": 0.07741557073313743
+      }
+    },
+    "evolution": {
+      "0": {
+        "token": "ev",
+        "position": 2160,
+        "max_attention": 0.91796875,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          2169
+        ],
+        "avg_max_per_head": 0.03235676564509049
+      },
+      "1": {
+        "token": "olution",
+        "position": 2161,
+        "max_attention": 0.92578125,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2162
+        ],
+        "avg_max_per_head": 0.028520478605059907
+      }
+    },
+    "unassisted": {
+      "0": {
+        "token": "un",
+        "position": 185,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          188
+        ],
+        "avg_max_per_head": 0.043808675720356405
+      },
+      "1": {
+        "token": "ass",
+        "position": 186,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          16,
+          31,
+          194
+        ],
+        "avg_max_per_head": 0.10553111892659217
+      },
+      "2": {
+        "token": "isted",
+        "position": 187,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          188
+        ],
+        "avg_max_per_head": 0.09750877553597093
+      }
+    },
+    "happens": {
+      "0": {
+        "token": "h",
+        "position": 190,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          22,
+          30,
+          222
+        ],
+        "avg_max_per_head": 0.06264371005818248
+      },
+      "1": {
+        "token": "app",
+        "position": 191,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          10,
+          26,
+          243
+        ],
+        "avg_max_per_head": 0.10023922624532133
+      },
+      "2": {
+        "token": "ens",
+        "position": 192,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          2,
+          26,
+          193
+        ],
+        "avg_max_per_head": 0.062405713950283825
+      }
+    },
+    "several": {
+      "0": {
+        "token": "se",
+        "position": 2105,
+        "max_attention": 0.71484375,
+        "max_location (layer, head, row)": [
+          3,
+          14,
+          2107
+        ],
+        "avg_max_per_head": 0.023322680790442973
+      },
+      "1": {
+        "token": "veral",
+        "position": 2106,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          2107
+        ],
+        "avg_max_per_head": 0.043493765479070134
+      }
+    },
+    "seemingly": {
+      "0": {
+        "token": "se",
+        "position": 2452,
+        "max_attention": 0.578125,
+        "max_location (layer, head, row)": [
+          24,
+          1,
+          2832
+        ],
+        "avg_max_per_head": 0.020442800156160956
+      },
+      "1": {
+        "token": "em",
+        "position": 2453,
+        "max_attention": 0.71484375,
+        "max_location (layer, head, row)": [
+          31,
+          23,
+          2455
+        ],
+        "avg_max_per_head": 0.021340441875508986
+      },
+      "2": {
+        "token": "ingly",
+        "position": 2454,
+        "max_attention": 0.4609375,
+        "max_location (layer, head, row)": [
+          6,
+          20,
+          2455
+        ],
+        "avg_max_per_head": 0.01857921119517414
+      }
+    },
+    "permutation": {
+      "0": {
+        "token": "per",
+        "position": 208,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          6,
+          16,
+          2162
+        ],
+        "avg_max_per_head": 0.06852540100226179
+      },
+      "1": {
+        "token": "mutation",
+        "position": 209,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          4,
+          11,
+          213
+        ],
+        "avg_max_per_head": 0.08503000502241775
+      }
+    },
+    "surviving": {
+      "0": {
+        "token": "sur",
+        "position": 210,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          14,
+          23,
+          213
+        ],
+        "avg_max_per_head": 0.047081682831048965
+      },
+      "1": {
+        "token": "v",
+        "position": 211,
+        "max_attention": 0.82421875,
+        "max_location (layer, head, row)": [
+          13,
+          27,
+          213
+        ],
+        "avg_max_per_head": 0.026768935611471534
+      },
+      "2": {
+        "token": "iving",
+        "position": 212,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          28,
+          10,
+          213
+        ],
+        "avg_max_per_head": 0.0985470546875149
+      }
+    },
+    "genetic": {
+      "0": {
+        "token": "gen",
+        "position": 215,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          2,
+          16,
+          217
+        ],
+        "avg_max_per_head": 0.027828773541841656
+      },
+      "1": {
+        "token": "etic",
+        "position": 216,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          0,
+          6,
+          217
+        ],
+        "avg_max_per_head": 0.04186362656764686
+      }
+    },
+    "simulator": {
+      "0": {
+        "token": "sim",
+        "position": 393,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          8,
+          25,
+          395
+        ],
+        "avg_max_per_head": 0.0800180418882519
+      },
+      "1": {
+        "token": "ulator",
+        "position": 394,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          28,
+          10,
+          395
+        ],
+        "avg_max_per_head": 0.06683345616329461
+      }
+    },
+    "opinion": {
+      "0": {
+        "token": "op",
+        "position": 224,
+        "max_attention": 0.91015625,
+        "max_location (layer, head, row)": [
+          9,
+          26,
+          227
+        ],
+        "avg_max_per_head": 0.09971732296980917
+      },
+      "1": {
+        "token": "inion",
+        "position": 225,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          2,
+          17,
+          226
+        ],
+        "avg_max_per_head": 0.08662863436620682
+      }
+    },
+    "facing": {
+      "0": {
+        "token": "f",
+        "position": 237,
+        "max_attention": 0.92578125,
+        "max_location (layer, head, row)": [
+          10,
+          9,
+          240
+        ],
+        "avg_max_per_head": 0.07405486944480799
+      },
+      "1": {
+        "token": "acing",
+        "position": 238,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          2,
+          11,
+          239
+        ],
+        "avg_max_per_head": 0.06556686665862799
+      }
+    },
+    "goes": {
+      "0": {
+        "token": "go",
+        "position": 2737,
+        "max_attention": 0.93359375,
+        "max_location (layer, head, row)": [
+          18,
+          14,
+          2739
+        ],
+        "avg_max_per_head": 0.029556720895925537
+      },
+      "1": {
+        "token": "es",
+        "position": 2738,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          29,
+          10,
+          2739
+        ],
+        "avg_max_per_head": 0.025196496695571113
+      }
+    },
+    "supposed": {
+      "0": {
+        "token": "sup",
+        "position": 2267,
+        "max_attention": 0.486328125,
+        "max_location (layer, head, row)": [
+          12,
+          19,
+          2695
+        ],
+        "avg_max_per_head": 0.014475629475782625
+      },
+      "1": {
+        "token": "posed",
+        "position": 2268,
+        "max_attention": 0.890625,
+        "max_location (layer, head, row)": [
+          9,
+          14,
+          2464
+        ],
+        "avg_max_per_head": 0.03137644499656744
+      }
+    },
+    "evolve": {
+      "0": {
+        "token": "ev",
+        "position": 762,
+        "max_attention": 0.87109375,
+        "max_location (layer, head, row)": [
+          4,
+          11,
+          2865
+        ],
+        "avg_max_per_head": 0.019595344085246325
+      },
+      "1": {
+        "token": "olve",
+        "position": 763,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          4,
+          27,
+          764
+        ],
+        "avg_max_per_head": 0.03486000368138775
+      }
+    },
+    "anymore": {
+      "0": {
+        "token": "an",
+        "position": 296,
+        "max_attention": 0.890625,
+        "max_location (layer, head, row)": [
+          6,
+          13,
+          301
+        ],
+        "avg_max_per_head": 0.06311206077225506
+      },
+      "1": {
+        "token": "ym",
+        "position": 297,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          5,
+          12,
+          301
+        ],
+        "avg_max_per_head": 0.05264336377149448
+      },
+      "2": {
+        "token": "ore",
+        "position": 298,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          4,
+          22,
+          300
+        ],
+        "avg_max_per_head": 0.0805502129951492
+      }
+    },
+    "equivalent": {
+      "0": {
+        "token": "equ",
+        "position": 304,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          3,
+          14,
+          306
+        ],
+        "avg_max_per_head": 0.03160774428397417
+      },
+      "1": {
+        "token": "ivalent",
+        "position": 305,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          4,
+          4,
+          306
+        ],
+        "avg_max_per_head": 0.06098042184021324
+      }
+    },
+    "intelligent": {
+      "0": {
+        "token": "int",
+        "position": 389,
+        "max_attention": 0.84375,
+        "max_location (layer, head, row)": [
+          2,
+          10,
+          391
+        ],
+        "avg_max_per_head": 0.039217240700963885
+      },
+      "1": {
+        "token": "elligent",
+        "position": 390,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          391
+        ],
+        "avg_max_per_head": 0.04037155566038564
+      }
+    },
+    "fable": {
+      "0": {
+        "token": "f",
+        "position": 312,
+        "max_attention": 0.91015625,
+        "max_location (layer, head, row)": [
+          6,
+          9,
+          323
+        ],
+        "avg_max_per_head": 0.059855724102817476
+      },
+      "1": {
+        "token": "able",
+        "position": 313,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          20,
+          29,
+          314
+        ],
+        "avg_max_per_head": 0.06895933416672051
+      }
+    },
+    "invented": {
+      "0": {
+        "token": "in",
+        "position": 314,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          2,
+          27,
+          316
+        ],
+        "avg_max_per_head": 0.031112750759348273
+      },
+      "1": {
+        "token": "vented",
+        "position": 315,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          9,
+          6,
+          316
+        ],
+        "avg_max_per_head": 0.0698983280453831
+      }
+    },
+    "creationists": {
+      "0": {
+        "token": "creation",
+        "position": 317,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          8,
+          21,
+          321
+        ],
+        "avg_max_per_head": 0.061028323019854724
+      },
+      "1": {
+        "token": "ists",
+        "position": 318,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          5,
+          8,
+          320
+        ],
+        "avg_max_per_head": 0.0711770424968563
+      }
+    },
+    "Pastafarian": {
+      "0": {
+        "token": "Past",
+        "position": 332,
+        "max_attention": 0.8046875,
+        "max_location (layer, head, row)": [
+          13,
+          19,
+          450
+        ],
+        "avg_max_per_head": 0.028197121457196772
+      },
+      "1": {
+        "token": "af",
+        "position": 333,
+        "max_attention": 0.94140625,
+        "max_location (layer, head, row)": [
+          4,
+          2,
+          335
+        ],
+        "avg_max_per_head": 0.053763537434861064
+      },
+      "2": {
+        "token": "arian",
+        "position": 334,
+        "max_attention": 0.95703125,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          335
+        ],
+        "avg_max_per_head": 0.06909666102728806
+      }
+    },
+    "rubbed": {
+      "0": {
+        "token": "rub",
+        "position": 342,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          348
+        ],
+        "avg_max_per_head": 0.04484887796570547
+      },
+      "1": {
+        "token": "bed",
+        "position": 343,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          344
+        ],
+        "avg_max_per_head": 0.04638801293913275
+      }
+    },
+    "Hence": {
+      "0": {
+        "token": "H",
+        "position": 349,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          14,
+          4,
+          356
+        ],
+        "avg_max_per_head": 0.047087544633541256
+      },
+      "1": {
+        "token": "ence",
+        "position": 350,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          1,
+          17,
+          351
+        ],
+        "avg_max_per_head": 0.0907965954975225
+      }
+    },
+    "biggest": {
+      "0": {
+        "token": "big",
+        "position": 2954,
+        "max_attention": 0.87890625,
+        "max_location (layer, head, row)": [
+          8,
+          19,
+          2962
+        ],
+        "avg_max_per_head": 0.03129728675048682
+      },
+      "1": {
+        "token": "gest",
+        "position": 2955,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          26,
+          13,
+          2956
+        ],
+        "avg_max_per_head": 0.026792982571350876
+      }
+    },
+    "dillema": {
+      "0": {
+        "token": "d",
+        "position": 355,
+        "max_attention": 0.86328125,
+        "max_location (layer, head, row)": [
+          6,
+          25,
+          358
+        ],
+        "avg_max_per_head": 0.03519015046185814
+      },
+      "1": {
+        "token": "ille",
+        "position": 356,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          2,
+          28,
+          358
+        ],
+        "avg_max_per_head": 0.039032113272696733
+      },
+      "2": {
+        "token": "ma",
+        "position": 357,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          358
+        ],
+        "avg_max_per_head": 0.04040068492759019
+      }
+    },
+    "deciding": {
+      "0": {
+        "token": "dec",
+        "position": 2968,
+        "max_attention": 0.55859375,
+        "max_location (layer, head, row)": [
+          18,
+          23,
+          2972
+        ],
+        "avg_max_per_head": 0.026650926934962627
+      },
+      "1": {
+        "token": "iding",
+        "position": 2969,
+        "max_attention": 0.81640625,
+        "max_location (layer, head, row)": [
+          29,
+          29,
+          2971
+        ],
+        "avg_max_per_head": 0.033889264275785536
+      }
+    },
+    "wrongly": {
+      "0": {
+        "token": "wrong",
+        "position": 396,
+        "max_attention": 0.6953125,
+        "max_location (layer, head, row)": [
+          17,
+          26,
+          2357
+        ],
+        "avg_max_per_head": 0.03223585314117372
+      },
+      "1": {
+        "token": "ly",
+        "position": 397,
+        "max_attention": 0.921875,
+        "max_location (layer, head, row)": [
+          20,
+          20,
+          406
+        ],
+        "avg_max_per_head": 0.05430240696296096
+      }
+    },
+    "contestant": {
+      "0": {
+        "token": "contest",
+        "position": 413,
+        "max_attention": 0.859375,
+        "max_location (layer, head, row)": [
+          8,
+          24,
+          417
+        ],
+        "avg_max_per_head": 0.07180158596020192
+      },
+      "1": {
+        "token": "ant",
+        "position": 414,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          27,
+          7,
+          415
+        ],
+        "avg_max_per_head": 0.0773457094328478
+      }
+    },
+    "judging": {
+      "0": {
+        "token": "jud",
+        "position": 421,
+        "max_attention": 0.87109375,
+        "max_location (layer, head, row)": [
+          8,
+          20,
+          423
+        ],
+        "avg_max_per_head": 0.04881381936138496
+      },
+      "1": {
+        "token": "ging",
+        "position": 422,
+        "max_attention": 0.94140625,
+        "max_location (layer, head, row)": [
+          1,
+          17,
+          423
+        ],
+        "avg_max_per_head": 0.07328534923726693
+      }
+    },
+    "artificial": {
+      "0": {
+        "token": "art",
+        "position": 449,
+        "max_attention": 0.83203125,
+        "max_location (layer, head, row)": [
+          17,
+          26,
+          2410
+        ],
+        "avg_max_per_head": 0.04677909577731043
+      },
+      "1": {
+        "token": "ificial",
+        "position": 450,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          8,
+          19,
+          489
+        ],
+        "avg_max_per_head": 0.06063852483930532
+      }
+    },
+    "somehow": {
+      "0": {
+        "token": "some",
+        "position": 662,
+        "max_attention": 0.8203125,
+        "max_location (layer, head, row)": [
+          25,
+          13,
+          664
+        ],
+        "avg_max_per_head": 0.04433316123322584
+      },
+      "1": {
+        "token": "how",
+        "position": 663,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          17,
+          26,
+          2624
+        ],
+        "avg_max_per_head": 0.05122731704614125
+      }
+    },
+    "Alas": {
+      "0": {
+        "token": "Al",
+        "position": 474,
+        "max_attention": 0.859375,
+        "max_location (layer, head, row)": [
+          0,
+          17,
+          492
+        ],
+        "avg_max_per_head": 0.05484205629909411
+      },
+      "1": {
+        "token": "as",
+        "position": 475,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          6,
+          25,
+          476
+        ],
+        "avg_max_per_head": 0.054032929678214714
+      }
+    },
+    "decided": {
+      "0": {
+        "token": "dec",
+        "position": 698,
+        "max_attention": 0.92578125,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          700
+        ],
+        "avg_max_per_head": 0.05426155208260752
+      },
+      "1": {
+        "token": "ided",
+        "position": 699,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          700
+        ],
+        "avg_max_per_head": 0.05675560809322633
+      }
+    },
+    "myself": {
+      "0": {
+        "token": "my",
+        "position": 502,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          4,
+          22,
+          505
+        ],
+        "avg_max_per_head": 0.062416277709417045
+      },
+      "1": {
+        "token": "self",
+        "position": 503,
+        "max_attention": 0.85546875,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          504
+        ],
+        "avg_max_per_head": 0.04947832637117244
+      }
+    },
+    "humanity": {
+      "0": {
+        "token": "human",
+        "position": 521,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          1,
+          17,
+          523
+        ],
+        "avg_max_per_head": 0.01886668970109895
+      },
+      "1": {
+        "token": "ity",
+        "position": 522,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          30,
+          29,
+          523
+        ],
+        "avg_max_per_head": 0.04948738758685067
+      }
+    },
+    "tried": {
+      "0": {
+        "token": "tr",
+        "position": 523,
+        "max_attention": 0.90625,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          526
+        ],
+        "avg_max_per_head": 0.03580505380523391
+      },
+      "1": {
+        "token": "ied",
+        "position": 524,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          4,
+          29,
+          526
+        ],
+        "avg_max_per_head": 0.04358832721482031
+      }
+    },
+    "foe": {
+      "0": {
+        "token": "fo",
+        "position": 537,
+        "max_attention": 0.7421875,
+        "max_location (layer, head, row)": [
+          5,
+          11,
+          2536
+        ],
+        "avg_max_per_head": 0.03433380805654451
+      },
+      "1": {
+        "token": "e",
+        "position": 538,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          5,
+          8,
+          2536
+        ],
+        "avg_max_per_head": 0.0495363287627697
+      }
+    },
+    "souls": {
+      "0": {
+        "token": "s",
+        "position": 555,
+        "max_attention": 0.9140625,
+        "max_location (layer, head, row)": [
+          20,
+          29,
+          558
+        ],
+        "avg_max_per_head": 0.04826082568615675
+      },
+      "1": {
+        "token": "ou",
+        "position": 556,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          559
+        ],
+        "avg_max_per_head": 0.07451110891997814
+      },
+      "2": {
+        "token": "ls",
+        "position": 557,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          10,
+          27,
+          2757
+        ],
+        "avg_max_per_head": 0.025728628737851977
+      }
+    },
+    "flying": {
+      "0": {
+        "token": "f",
+        "position": 924,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          8,
+          13,
+          926
+        ],
+        "avg_max_per_head": 0.06191819149535149
+      },
+      "1": {
+        "token": "lying",
+        "position": 925,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          1,
+          10,
+          926
+        ],
+        "avg_max_per_head": 0.04484026617137715
+      }
+    },
+    "towards": {
+      "0": {
+        "token": "t",
+        "position": 562,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          4,
+          10,
+          566
+        ],
+        "avg_max_per_head": 0.06487464770907536
+      },
+      "1": {
+        "token": "owards",
+        "position": 563,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          2,
+          28,
+          564
+        ],
+        "avg_max_per_head": 0.04630812001414597
+      }
+    },
+    "monolith": {
+      "0": {
+        "token": "mon",
+        "position": 565,
+        "max_attention": 0.6953125,
+        "max_location (layer, head, row)": [
+          24,
+          24,
+          597
+        ],
+        "avg_max_per_head": 0.025796072906814516
+      },
+      "1": {
+        "token": "olith",
+        "position": 566,
+        "max_attention": 0.890625,
+        "max_location (layer, head, row)": [
+          8,
+          21,
+          568
+        ],
+        "avg_max_per_head": 0.03956244932487607
+      }
+    },
+    "Odyssey": {
+      "0": {
+        "token": "Od",
+        "position": 580,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          9,
+          6,
+          593
+        ],
+        "avg_max_per_head": 0.058267846587114036
+      },
+      "1": {
+        "token": "yssey",
+        "position": 581,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          2,
+          21,
+          582
+        ],
+        "avg_max_per_head": 0.0574282769812271
+      }
+    },
+    "compelling": {
+      "0": {
+        "token": "comp",
+        "position": 592,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          29,
+          11,
+          596
+        ],
+        "avg_max_per_head": 0.051337100187083706
+      },
+      "1": {
+        "token": "elling",
+        "position": 593,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          1,
+          17,
+          594
+        ],
+        "avg_max_per_head": 0.06674752768594772
+      }
+    },
+    "mechanics": {
+      "0": {
+        "token": "me",
+        "position": 599,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          5,
+          3,
+          1407
+        ],
+        "avg_max_per_head": 0.040052903787000105
+      },
+      "1": {
+        "token": "chan",
+        "position": 600,
+        "max_attention": 0.95703125,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          602
+        ],
+        "avg_max_per_head": 0.04733040579594672
+      },
+      "2": {
+        "token": "ics",
+        "position": 601,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          5,
+          8,
+          605
+        ],
+        "avg_max_per_head": 0.07025438599521294
+      }
+    },
+    "Borgs": {
+      "0": {
+        "token": "B",
+        "position": 605,
+        "max_attention": 0.71484375,
+        "max_location (layer, head, row)": [
+          26,
+          0,
+          610
+        ],
+        "avg_max_per_head": 0.042077546095242724
+      },
+      "1": {
+        "token": "org",
+        "position": 606,
+        "max_attention": 0.95703125,
+        "max_location (layer, head, row)": [
+          8,
+          21,
+          610
+        ],
+        "avg_max_per_head": 0.05151120777009055
+      },
+      "2": {
+        "token": "s",
+        "position": 607,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          5,
+          12,
+          608
+        ],
+        "avg_max_per_head": 0.07767617964418605
+      }
+    },
+    "inspiration": {
+      "0": {
+        "token": "ins",
+        "position": 611,
+        "max_attention": 0.59375,
+        "max_location (layer, head, row)": [
+          1,
+          10,
+          663
+        ],
+        "avg_max_per_head": 0.02784623348270543
+      },
+      "1": {
+        "token": "piration",
+        "position": 612,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          1,
+          24,
+          613
+        ],
+        "avg_max_per_head": 0.040207677433500066
+      }
+    },
+    "hypothesis": {
+      "0": {
+        "token": "h",
+        "position": 617,
+        "max_attention": 0.86328125,
+        "max_location (layer, head, row)": [
+          10,
+          3,
+          624
+        ],
+        "avg_max_per_head": 0.04733713160385378
+      },
+      "1": {
+        "token": "ypo",
+        "position": 618,
+        "max_attention": 0.90625,
+        "max_location (layer, head, row)": [
+          29,
+          11,
+          620
+        ],
+        "avg_max_per_head": 0.06460964417783543
+      },
+      "2": {
+        "token": "thesis",
+        "position": 619,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          4,
+          22,
+          620
+        ],
+        "avg_max_per_head": 0.03945253882557154
+      }
+    },
+    "fighting": {
+      "0": {
+        "token": "fight",
+        "position": 642,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          14,
+          4,
+          647
+        ],
+        "avg_max_per_head": 0.05009889608481899
+      },
+      "1": {
+        "token": "ing",
+        "position": 643,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          1,
+          13,
+          644
+        ],
+        "avg_max_per_head": 0.05563935879035853
+      }
+    },
+    "Borg": {
+      "0": {
+        "token": "B",
+        "position": 645,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          648
+        ],
+        "avg_max_per_head": 0.03256367133872118
+      },
+      "1": {
+        "token": "org",
+        "position": 646,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          647
+        ],
+        "avg_max_per_head": 0.07093633618205786
+      }
+    },
+    "girlfriend": {
+      "0": {
+        "token": "girl",
+        "position": 658,
+        "max_attention": 0.77734375,
+        "max_location (layer, head, row)": [
+          8,
+          18,
+          2638
+        ],
+        "avg_max_per_head": 0.03047873589093797
+      },
+      "1": {
+        "token": "friend",
+        "position": 659,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          660
+        ],
+        "avg_max_per_head": 0.0342783726810012
+      }
+    },
+    "gave": {
+      "0": {
+        "token": "g",
+        "position": 664,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          24,
+          4,
+          666
+        ],
+        "avg_max_per_head": 0.048561628616880625
+      },
+      "1": {
+        "token": "ave",
+        "position": 665,
+        "max_attention": 0.91796875,
+        "max_location (layer, head, row)": [
+          0,
+          16,
+          666
+        ],
+        "avg_max_per_head": 0.030026550928596407
+      }
+    },
+    "Pasta": {
+      "0": {
+        "token": "P",
+        "position": 2163,
+        "max_attention": 0.70703125,
+        "max_location (layer, head, row)": [
+          18,
+          1,
+          2165
+        ],
+        "avg_max_per_head": 0.020329693390522152
+      },
+      "1": {
+        "token": "asta",
+        "position": 2164,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          2,
+          29,
+          2165
+        ],
+        "avg_max_per_head": 0.04376863021752797
+      }
+    },
+    "sounded": {
+      "0": {
+        "token": "s",
+        "position": 689,
+        "max_attention": 0.77734375,
+        "max_location (layer, head, row)": [
+          13,
+          5,
+          691
+        ],
+        "avg_max_per_head": 0.04148419332341291
+      },
+      "1": {
+        "token": "ounded",
+        "position": 690,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          20,
+          30,
+          691
+        ],
+        "avg_max_per_head": 0.055131530680228025
+      }
+    },
+    "Conversations": {
+      "0": {
+        "token": "Con",
+        "position": 705,
+        "max_attention": 0.86328125,
+        "max_location (layer, head, row)": [
+          9,
+          5,
+          709
+        ],
+        "avg_max_per_head": 0.04172936305985786
+      },
+      "1": {
+        "token": "versations",
+        "position": 706,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          16,
+          1,
+          729
+        ],
+        "avg_max_per_head": 0.06319269997766241
+      }
+    },
+    "inspiring": {
+      "0": {
+        "token": "ins",
+        "position": 709,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          12,
+          24,
+          808
+        ],
+        "avg_max_per_head": 0.034218988206703216
+      },
+      "1": {
+        "token": "piring",
+        "position": 710,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          8,
+          26,
+          740
+        ],
+        "avg_max_per_head": 0.1055281019071117
+      }
+    },
+    "Roushey": {
+      "0": {
+        "token": "R",
+        "position": 1250,
+        "max_attention": 0.68359375,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2340
+        ],
+        "avg_max_per_head": 0.02037135158025194
+      },
+      "1": {
+        "token": "ous",
+        "position": 1251,
+        "max_attention": 0.9453125,
+        "max_location (layer, head, row)": [
+          0,
+          17,
+          1277
+        ],
+        "avg_max_per_head": 0.052191401162417606
+      },
+      "2": {
+        "token": "hey",
+        "position": 1252,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          0,
+          13,
+          1254
+        ],
+        "avg_max_per_head": 0.060243787316721864
+      }
+    },
+    "Mechanical": {
+      "0": {
+        "token": "Mech",
+        "position": 723,
+        "max_attention": 0.5234375,
+        "max_location (layer, head, row)": [
+          13,
+          19,
+          1825
+        ],
+        "avg_max_per_head": 0.028352455934509635
+      },
+      "1": {
+        "token": "anical",
+        "position": 724,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          725
+        ],
+        "avg_max_per_head": 0.06709272059379146
+      }
+    },
+    "Underdogs": {
+      "0": {
+        "token": "Under",
+        "position": 725,
+        "max_attention": 0.8515625,
+        "max_location (layer, head, row)": [
+          4,
+          29,
+          727
+        ],
+        "avg_max_per_head": 0.033472469775006175
+      },
+      "1": {
+        "token": "dogs",
+        "position": 726,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          2,
+          29,
+          727
+        ],
+        "avg_max_per_head": 0.058272679074434564
+      }
+    },
+    "further": {
+      "0": {
+        "token": "f",
+        "position": 734,
+        "max_attention": 0.75,
+        "max_location (layer, head, row)": [
+          2,
+          29,
+          736
+        ],
+        "avg_max_per_head": 0.02421644510468468
+      },
+      "1": {
+        "token": "urther",
+        "position": 735,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          5,
+          9,
+          736
+        ],
+        "avg_max_per_head": 0.03834538269438781
+      }
+    },
+    "matured": {
+      "0": {
+        "token": "m",
+        "position": 736,
+        "max_attention": 0.875,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2626
+        ],
+        "avg_max_per_head": 0.04651502100750804
+      },
+      "1": {
+        "token": "ature",
+        "position": 737,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          2,
+          28,
+          743
+        ],
+        "avg_max_per_head": 0.05086933384882286
+      },
+      "2": {
+        "token": "d",
+        "position": 738,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          13,
+          9,
+          739
+        ],
+        "avg_max_per_head": 0.05305643522297032
+      }
+    },
+    "involved": {
+      "0": {
+        "token": "inv",
+        "position": 744,
+        "max_attention": 0.416015625,
+        "max_location (layer, head, row)": [
+          1,
+          17,
+          747
+        ],
+        "avg_max_per_head": 0.014821783814113587
+      },
+      "1": {
+        "token": "olved",
+        "position": 745,
+        "max_attention": 0.80078125,
+        "max_location (layer, head, row)": [
+          8,
+          9,
+          746
+        ],
+        "avg_max_per_head": 0.045411022496409714
+      }
+    },
+    "pasta": {
+      "0": {
+        "token": "p",
+        "position": 2377,
+        "max_attention": 0.328125,
+        "max_location (layer, head, row)": [
+          15,
+          11,
+          2380
+        ],
+        "avg_max_per_head": 0.017138628056272864
+      },
+      "1": {
+        "token": "asta",
+        "position": 2378,
+        "max_attention": 0.83984375,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2379
+        ],
+        "avg_max_per_head": 0.03949410829227418
+      }
+    },
+    "became": {
+      "0": {
+        "token": "bec",
+        "position": 766,
+        "max_attention": 0.8515625,
+        "max_location (layer, head, row)": [
+          1,
+          2,
+          772
+        ],
+        "avg_max_per_head": 0.04732474751654081
+      },
+      "1": {
+        "token": "ame",
+        "position": 767,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          2,
+          26,
+          768
+        ],
+        "avg_max_per_head": 0.07998663920443505
+      }
+    },
+    "Spaghetti": {
+      "0": {
+        "token": "Sp",
+        "position": 788,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          9,
+          18,
+          794
+        ],
+        "avg_max_per_head": 0.05404883105074987
+      },
+      "1": {
+        "token": "aghetti",
+        "position": 789,
+        "max_attention": 0.89453125,
+        "max_location (layer, head, row)": [
+          30,
+          24,
+          790
+        ],
+        "avg_max_per_head": 0.06862115312833339
+      }
+    },
+    "evolving": {
+      "0": {
+        "token": "ev",
+        "position": 796,
+        "max_attention": 0.796875,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          798
+        ],
+        "avg_max_per_head": 0.04253829458320979
+      },
+      "1": {
+        "token": "olving",
+        "position": 797,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          1,
+          4,
+          798
+        ],
+        "avg_max_per_head": 0.02738244811189361
+      }
+    },
+    "dinner": {
+      "0": {
+        "token": "d",
+        "position": 801,
+        "max_attention": 0.86328125,
+        "max_location (layer, head, row)": [
+          1,
+          10,
+          861
+        ],
+        "avg_max_per_head": 0.04370950814336538
+      },
+      "1": {
+        "token": "inner",
+        "position": 802,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          8,
+          19,
+          862
+        ],
+        "avg_max_per_head": 0.03991527989273891
+      }
+    },
+    "evolved": {
+      "0": {
+        "token": "ev",
+        "position": 1152,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          0,
+          13,
+          1157
+        ],
+        "avg_max_per_head": 0.04188931340468116
+      },
+      "1": {
+        "token": "olved",
+        "position": 1153,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          2,
+          29,
+          1154
+        ],
+        "avg_max_per_head": 0.04236853419570252
+      }
+    },
+    "sitting": {
+      "0": {
+        "token": "s",
+        "position": 818,
+        "max_attention": 0.875,
+        "max_location (layer, head, row)": [
+          6,
+          25,
+          820
+        ],
+        "avg_max_per_head": 0.03257461193425115
+      },
+      "1": {
+        "token": "itting",
+        "position": 819,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          1,
+          17,
+          820
+        ],
+        "avg_max_per_head": 0.05717837257543579
+      }
+    },
+    "guests": {
+      "0": {
+        "token": "guest",
+        "position": 840,
+        "max_attention": 0.7421875,
+        "max_location (layer, head, row)": [
+          12,
+          14,
+          864
+        ],
+        "avg_max_per_head": 0.04558437585365027
+      },
+      "1": {
+        "token": "s",
+        "position": 841,
+        "max_attention": 0.91796875,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          842
+        ],
+        "avg_max_per_head": 0.049129652965348214
+      }
+    },
+    "pastas": {
+      "0": {
+        "token": "past",
+        "position": 1033,
+        "max_attention": 0.85546875,
+        "max_location (layer, head, row)": [
+          8,
+          16,
+          1039
+        ],
+        "avg_max_per_head": 0.0538255735009443
+      },
+      "1": {
+        "token": "as",
+        "position": 1034,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          4,
+          22,
+          1035
+        ],
+        "avg_max_per_head": 0.05718804968637414
+      }
+    },
+    "faster": {
+      "0": {
+        "token": "f",
+        "position": 884,
+        "max_attention": 0.8671875,
+        "max_location (layer, head, row)": [
+          20,
+          2,
+          957
+        ],
+        "avg_max_per_head": 0.05285717920924071
+      },
+      "1": {
+        "token": "aster",
+        "position": 885,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          6,
+          2,
+          897
+        ],
+        "avg_max_per_head": 0.09882573754293844
+      }
+    },
+    "stronger": {
+      "0": {
+        "token": "strong",
+        "position": 889,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          891
+        ],
+        "avg_max_per_head": 0.06473420461406931
+      },
+      "1": {
+        "token": "er",
+        "position": 890,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          7,
+          20,
+          891
+        ],
+        "avg_max_per_head": 0.053214095467410516
+      }
+    },
+    "varying": {
+      "0": {
+        "token": "vary",
+        "position": 894,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          897
+        ],
+        "avg_max_per_head": 0.04957754389033653
+      },
+      "1": {
+        "token": "ing",
+        "position": 895,
+        "max_attention": 0.921875,
+        "max_location (layer, head, row)": [
+          4,
+          11,
+          896
+        ],
+        "avg_max_per_head": 0.06305003036686685
+      }
+    },
+    "costs": {
+      "0": {
+        "token": "cost",
+        "position": 896,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          16,
+          22,
+          971
+        ],
+        "avg_max_per_head": 0.04775122198043391
+      },
+      "1": {
+        "token": "s",
+        "position": 897,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          5,
+          12,
+          899
+        ],
+        "avg_max_per_head": 0.07188816770212725
+      }
+    },
+    "debited": {
+      "0": {
+        "token": "deb",
+        "position": 901,
+        "max_attention": 0.93359375,
+        "max_location (layer, head, row)": [
+          5,
+          9,
+          903
+        ],
+        "avg_max_per_head": 0.03192260372452438
+      },
+      "1": {
+        "token": "ited",
+        "position": 902,
+        "max_attention": 0.90234375,
+        "max_location (layer, head, row)": [
+          4,
+          11,
+          903
+        ],
+        "avg_max_per_head": 0.02464569578296505
+      }
+    },
+    "spawned": {
+      "0": {
+        "token": "spawn",
+        "position": 975,
+        "max_attention": 0.875,
+        "max_location (layer, head, row)": [
+          17,
+          9,
+          1061
+        ],
+        "avg_max_per_head": 0.0317433038726449
+      },
+      "1": {
+        "token": "ed",
+        "position": 976,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          0,
+          13,
+          979
+        ],
+        "avg_max_per_head": 0.07168288980028592
+      }
+    },
+    "instinct": {
+      "0": {
+        "token": "inst",
+        "position": 929,
+        "max_attention": 0.76953125,
+        "max_location (layer, head, row)": [
+          26,
+          8,
+          931
+        ],
+        "avg_max_per_head": 0.032304670196026564
+      },
+      "1": {
+        "token": "inct",
+        "position": 930,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          0,
+          1,
+          931
+        ],
+        "avg_max_per_head": 0.025023821042850614
+      }
+    },
+    "conquer": {
+      "0": {
+        "token": "con",
+        "position": 1111,
+        "max_attention": 0.64453125,
+        "max_location (layer, head, row)": [
+          8,
+          19,
+          1151
+        ],
+        "avg_max_per_head": 0.04116493125911802
+      },
+      "1": {
+        "token": "quer",
+        "position": 1112,
+        "max_attention": 0.9140625,
+        "max_location (layer, head, row)": [
+          6,
+          21,
+          1113
+        ],
+        "avg_max_per_head": 0.05407644994556904
+      }
+    },
+    "autonomous": {
+      "0": {
+        "token": "aut",
+        "position": 969,
+        "max_attention": 0.859375,
+        "max_location (layer, head, row)": [
+          13,
+          9,
+          971
+        ],
+        "avg_max_per_head": 0.046494267298839986
+      },
+      "1": {
+        "token": "onomous",
+        "position": 970,
+        "max_attention": 0.87890625,
+        "max_location (layer, head, row)": [
+          8,
+          18,
+          971
+        ],
+        "avg_max_per_head": 0.04364729378721677
+      }
+    },
+    "DotA": {
+      "0": {
+        "token": "Dot",
+        "position": 988,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          5,
+          9,
+          990
+        ],
+        "avg_max_per_head": 0.048616898886393756
+      },
+      "1": {
+        "token": "A",
+        "position": 989,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          0,
+          10,
+          990
+        ],
+        "avg_max_per_head": 0.03827836731215939
+      }
+    },
+    "LoL": {
+      "0": {
+        "token": "Lo",
+        "position": 991,
+        "max_attention": 0.90625,
+        "max_location (layer, head, row)": [
+          12,
+          4,
+          993
+        ],
+        "avg_max_per_head": 0.05649633688153699
+      },
+      "1": {
+        "token": "L",
+        "position": 992,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          2,
+          21,
+          993
+        ],
+        "avg_max_per_head": 0.07490904016594868
+      }
+    },
+    "creeps": {
+      "0": {
+        "token": "cre",
+        "position": 993,
+        "max_attention": 0.66796875,
+        "max_location (layer, head, row)": [
+          0,
+          17,
+          1090
+        ],
+        "avg_max_per_head": 0.022408769000321627
+      },
+      "1": {
+        "token": "eps",
+        "position": 994,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          16,
+          1,
+          1015
+        ],
+        "avg_max_per_head": 0.0762106679030694
+      }
+    },
+    "sauce": {
+      "0": {
+        "token": "s",
+        "position": 2386,
+        "max_attention": 0.703125,
+        "max_location (layer, head, row)": [
+          17,
+          12,
+          2388
+        ],
+        "avg_max_per_head": 0.019379570265300572
+      },
+      "1": {
+        "token": "auce",
+        "position": 2387,
+        "max_attention": 0.93359375,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2388
+        ],
+        "avg_max_per_head": 0.03542513685533777
+      }
+    },
+    "dies": {
+      "0": {
+        "token": "d",
+        "position": 1025,
+        "max_attention": 0.79296875,
+        "max_location (layer, head, row)": [
+          4,
+          15,
+          1030
+        ],
+        "avg_max_per_head": 0.035367646312806755
+      },
+      "1": {
+        "token": "ies",
+        "position": 1026,
+        "max_attention": 0.92578125,
+        "max_location (layer, head, row)": [
+          2,
+          8,
+          1027
+        ],
+        "avg_max_per_head": 0.03847220307216048
+      }
+    },
+    "vicinity": {
+      "0": {
+        "token": "vic",
+        "position": 1048,
+        "max_attention": 0.828125,
+        "max_location (layer, head, row)": [
+          20,
+          13,
+          1060
+        ],
+        "avg_max_per_head": 0.027237777248956263
+      },
+      "1": {
+        "token": "inity",
+        "position": 1049,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          4,
+          27,
+          1060
+        ],
+        "avg_max_per_head": 0.04497479210840538
+      }
+    },
+    "conquering": {
+      "0": {
+        "token": "con",
+        "position": 1673,
+        "max_attention": 0.76171875,
+        "max_location (layer, head, row)": [
+          20,
+          4,
+          1750
+        ],
+        "avg_max_per_head": 0.022782918851589784
+      },
+      "1": {
+        "token": "qu",
+        "position": 1674,
+        "max_attention": 0.66796875,
+        "max_location (layer, head, row)": [
+          4,
+          2,
+          1676
+        ],
+        "avg_max_per_head": 0.029267246965900995
+      },
+      "2": {
+        "token": "ering",
+        "position": 1675,
+        "max_attention": 0.921875,
+        "max_location (layer, head, row)": [
+          4,
+          2,
+          1679
+        ],
+        "avg_max_per_head": 0.05480575292313006
+      }
+    },
+    "conquered": {
+      "0": {
+        "token": "con",
+        "position": 1074,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          17,
+          26,
+          3035
+        ],
+        "avg_max_per_head": 0.02574868785450235
+      },
+      "1": {
+        "token": "qu",
+        "position": 1075,
+        "max_attention": 0.85546875,
+        "max_location (layer, head, row)": [
+          8,
+          19,
+          1095
+        ],
+        "avg_max_per_head": 0.031102944281883538
+      },
+      "2": {
+        "token": "ered",
+        "position": 1076,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          0,
+          27,
+          1078
+        ],
+        "avg_max_per_head": 0.039989940414670855
+      }
+    },
+    "Battlefield": {
+      "0": {
+        "token": "Battle",
+        "position": 1123,
+        "max_attention": 0.921875,
+        "max_location (layer, head, row)": [
+          16,
+          7,
+          1125
+        ],
+        "avg_max_per_head": 0.0826323488727212
+      },
+      "1": {
+        "token": "field",
+        "position": 1124,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          1,
+          24,
+          1125
+        ],
+        "avg_max_per_head": 0.05752676079282537
+      }
+    },
+    "Conquest": {
+      "0": {
+        "token": "Con",
+        "position": 1129,
+        "max_attention": 0.73828125,
+        "max_location (layer, head, row)": [
+          8,
+          24,
+          1133
+        ],
+        "avg_max_per_head": 0.04993245151126757
+      },
+      "1": {
+        "token": "quest",
+        "position": 1130,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          14,
+          31,
+          1131
+        ],
+        "avg_max_per_head": 0.06757144076982513
+      }
+    },
+    "bistro": {
+      "0": {
+        "token": "b",
+        "position": 1158,
+        "max_attention": 0.91796875,
+        "max_location (layer, head, row)": [
+          13,
+          15,
+          1178
+        ],
+        "avg_max_per_head": 0.04251336236484349
+      },
+      "1": {
+        "token": "istro",
+        "position": 1159,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          9,
+          25,
+          1162
+        ],
+        "avg_max_per_head": 0.04686682132887654
+      }
+    },
+    "Bistro": {
+      "0": {
+        "token": "B",
+        "position": 1169,
+        "max_attention": 0.59375,
+        "max_location (layer, head, row)": [
+          1,
+          7,
+          1190
+        ],
+        "avg_max_per_head": 0.03133760194759816
+      },
+      "1": {
+        "token": "istro",
+        "position": 1170,
+        "max_attention": 0.87890625,
+        "max_location (layer, head, row)": [
+          2,
+          8,
+          1171
+        ],
+        "avg_max_per_head": 0.03384606767212972
+      }
+    },
+    "founder": {
+      "0": {
+        "token": "found",
+        "position": 1173,
+        "max_attention": 0.87890625,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          1176
+        ],
+        "avg_max_per_head": 0.03437002529972233
+      },
+      "1": {
+        "token": "er",
+        "position": 1174,
+        "max_attention": 0.8984375,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          1175
+        ],
+        "avg_max_per_head": 0.0319535908929538
+      }
+    },
+    "FDT": {
+      "0": {
+        "token": "F",
+        "position": 1190,
+        "max_attention": 0.78125,
+        "max_location (layer, head, row)": [
+          31,
+          23,
+          1193
+        ],
+        "avg_max_per_head": 0.049004851607605815
+      },
+      "1": {
+        "token": "DT",
+        "position": 1191,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          9,
+          18,
+          1193
+        ],
+        "avg_max_per_head": 0.06362850125879049
+      }
+    },
+    "Starling": {
+      "0": {
+        "token": "Star",
+        "position": 2680,
+        "max_attention": 0.546875,
+        "max_location (layer, head, row)": [
+          17,
+          3,
+          2682
+        ],
+        "avg_max_per_head": 0.018373073085967917
+      },
+      "1": {
+        "token": "ling",
+        "position": 2681,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          30,
+          27,
+          2684
+        ],
+        "avg_max_per_head": 0.038696569070452824
+      }
+    },
+    "ActionScript": {
+      "0": {
+        "token": "Action",
+        "position": 1200,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          1205
+        ],
+        "avg_max_per_head": 0.03584584890631959
+      },
+      "1": {
+        "token": "Script",
+        "position": 1201,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          1202
+        ],
+        "avg_max_per_head": 0.048545344179729
+      }
+    },
+    "frameworks": {
+      "0": {
+        "token": "framework",
+        "position": 3031,
+        "max_attention": 0.466796875,
+        "max_location (layer, head, row)": [
+          2,
+          30,
+          3033
+        ],
+        "avg_max_per_head": 0.012176912549875851
+      },
+      "1": {
+        "token": "s",
+        "position": 3032,
+        "max_attention": 0.8046875,
+        "max_location (layer, head, row)": [
+          6,
+          20,
+          3033
+        ],
+        "avg_max_per_head": 0.016008938029699493
+      }
+    },
+    "livestreamed": {
+      "0": {
+        "token": "liv",
+        "position": 1225,
+        "max_attention": 0.796875,
+        "max_location (layer, head, row)": [
+          8,
+          28,
+          1248
+        ],
+        "avg_max_per_head": 0.024519146216334775
+      },
+      "1": {
+        "token": "est",
+        "position": 1226,
+        "max_attention": 0.796875,
+        "max_location (layer, head, row)": [
+          16,
+          1,
+          1248
+        ],
+        "avg_max_per_head": 0.035634579573525116
+      },
+      "2": {
+        "token": "ream",
+        "position": 1227,
+        "max_attention": 0.94140625,
+        "max_location (layer, head, row)": [
+          9,
+          3,
+          1248
+        ],
+        "avg_max_per_head": 0.06013492941565346
+      },
+      "3": {
+        "token": "ed",
+        "position": 1228,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          1229
+        ],
+        "avg_max_per_head": 0.06303423733334057
+      }
+    },
+    "twitch": {
+      "0": {
+        "token": "t",
+        "position": 1233,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          16,
+          22,
+          1240
+        ],
+        "avg_max_per_head": 0.08866364863933995
+      },
+      "1": {
+        "token": "witch",
+        "position": 1234,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          2,
+          8,
+          1235
+        ],
+        "avg_max_per_head": 0.0708304742584005
+      }
+    },
+    "XSplit": {
+      "0": {
+        "token": "X",
+        "position": 1259,
+        "max_attention": 0.8984375,
+        "max_location (layer, head, row)": [
+          8,
+          22,
+          1262
+        ],
+        "avg_max_per_head": 0.04667645864537917
+      },
+      "1": {
+        "token": "Split",
+        "position": 1260,
+        "max_attention": 0.9453125,
+        "max_location (layer, head, row)": [
+          24,
+          15,
+          1261
+        ],
+        "avg_max_per_head": 0.040315738748176955
+      }
+    },
+    "amazing": {
+      "0": {
+        "token": "am",
+        "position": 2095,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          6,
+          15,
+          2098
+        ],
+        "avg_max_per_head": 0.02522492507705465
+      },
+      "1": {
+        "token": "azing",
+        "position": 2096,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          29,
+          14,
+          2097
+        ],
+        "avg_max_per_head": 0.06126187802874483
+      }
+    },
+    "livestream": {
+      "0": {
+        "token": "liv",
+        "position": 1276,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          15,
+          3,
+          1342
+        ],
+        "avg_max_per_head": 0.04096515299170278
+      },
+      "1": {
+        "token": "est",
+        "position": 1277,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          1280
+        ],
+        "avg_max_per_head": 0.06234728521667421
+      },
+      "2": {
+        "token": "ream",
+        "position": 1278,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          1279
+        ],
+        "avg_max_per_head": 0.052405115362489596
+      }
+    },
+    "effortless": {
+      "0": {
+        "token": "eff",
+        "position": 1280,
+        "max_attention": 0.59375,
+        "max_location (layer, head, row)": [
+          4,
+          15,
+          1283
+        ],
+        "avg_max_per_head": 0.021137001996976323
+      },
+      "1": {
+        "token": "ort",
+        "position": 1281,
+        "max_attention": 0.64453125,
+        "max_location (layer, head, row)": [
+          16,
+          1,
+          1298
+        ],
+        "avg_max_per_head": 0.025372975738719106
+      },
+      "2": {
+        "token": "less",
+        "position": 1282,
+        "max_attention": 0.8046875,
+        "max_location (layer, head, row)": [
+          10,
+          3,
+          1283
+        ],
+        "avg_max_per_head": 0.04348200204549357
+      }
+    },
+    "interact": {
+      "0": {
+        "token": "inter",
+        "position": 1309,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          6,
+          1,
+          1312
+        ],
+        "avg_max_per_head": 0.044983865751419216
+      },
+      "1": {
+        "token": "act",
+        "position": 1310,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          1311
+        ],
+        "avg_max_per_head": 0.05486716151062865
+      }
+    },
+    "knowing": {
+      "0": {
+        "token": "know",
+        "position": 1323,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          3,
+          9,
+          1326
+        ],
+        "avg_max_per_head": 0.029988904017955065
+      },
+      "1": {
+        "token": "ing",
+        "position": 1324,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          0,
+          16,
+          1325
+        ],
+        "avg_max_per_head": 0.044754028553143144
+      }
+    },
+    "recording": {
+      "0": {
+        "token": "rec",
+        "position": 1329,
+        "max_attention": 0.9453125,
+        "max_location (layer, head, row)": [
+          4,
+          4,
+          1331
+        ],
+        "avg_max_per_head": 0.04462873353622854
+      },
+      "1": {
+        "token": "ording",
+        "position": 1330,
+        "max_attention": 0.90625,
+        "max_location (layer, head, row)": [
+          22,
+          28,
+          1331
+        ],
+        "avg_max_per_head": 0.05575390998274088
+      }
+    },
+    "timelapse": {
+      "0": {
+        "token": "tim",
+        "position": 1343,
+        "max_attention": 0.8359375,
+        "max_location (layer, head, row)": [
+          8,
+          7,
+          1483
+        ],
+        "avg_max_per_head": 0.03070782095892355
+      },
+      "1": {
+        "token": "el",
+        "position": 1344,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          0,
+          17,
+          1394
+        ],
+        "avg_max_per_head": 0.03323315060697496
+      },
+      "2": {
+        "token": "apse",
+        "position": 1345,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          1,
+          2,
+          1347
+        ],
+        "avg_max_per_head": 0.059740675293141976
+      }
+    },
+    "recorded": {
+      "0": {
+        "token": "record",
+        "position": 1354,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          1356
+        ],
+        "avg_max_per_head": 0.04469083990261424
+      },
+      "1": {
+        "token": "ed",
+        "position": 1355,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          1356
+        ],
+        "avg_max_per_head": 0.039102140537579544
+      }
+    },
+    "watching": {
+      "0": {
+        "token": "watch",
+        "position": 1554,
+        "max_attention": 0.4921875,
+        "max_location (layer, head, row)": [
+          17,
+          17,
+          1556
+        ],
+        "avg_max_per_head": 0.026716705615399405
+      },
+      "1": {
+        "token": "ing",
+        "position": 1555,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          1,
+          24,
+          1556
+        ],
+        "avg_max_per_head": 0.04772019712254405
+      }
+    },
+    "shoulder": {
+      "0": {
+        "token": "should",
+        "position": 1378,
+        "max_attention": 0.93359375,
+        "max_location (layer, head, row)": [
+          6,
+          15,
+          1382
+        ],
+        "avg_max_per_head": 0.016570103995036334
+      },
+      "1": {
+        "token": "er",
+        "position": 1379,
+        "max_attention": 0.9453125,
+        "max_location (layer, head, row)": [
+          2,
+          16,
+          1380
+        ],
+        "avg_max_per_head": 0.03171092917909846
+      }
+    },
+    "realize": {
+      "0": {
+        "token": "real",
+        "position": 1384,
+        "max_attention": 0.95703125,
+        "max_location (layer, head, row)": [
+          8,
+          22,
+          1386
+        ],
+        "avg_max_per_head": 0.036883195978589356
+      },
+      "1": {
+        "token": "ize",
+        "position": 1385,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          22,
+          23,
+          1386
+        ],
+        "avg_max_per_head": 0.04295097108115442
+      }
+    },
+    "spend": {
+      "0": {
+        "token": "sp",
+        "position": 3048,
+        "max_attention": 0.6484375,
+        "max_location (layer, head, row)": [
+          21,
+          8,
+          3051
+        ],
+        "avg_max_per_head": 0.015552132352240733
+      },
+      "1": {
+        "token": "end",
+        "position": 3049,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          3071
+        ],
+        "avg_max_per_head": 0.03267824743670644
+      }
+    },
+    "inane": {
+      "0": {
+        "token": "in",
+        "position": 1398,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          1400
+        ],
+        "avg_max_per_head": 0.060944190132431686
+      },
+      "1": {
+        "token": "ane",
+        "position": 1399,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          28,
+          10,
+          1400
+        ],
+        "avg_max_per_head": 0.045043082209303975
+      }
+    },
+    "wasting": {
+      "0": {
+        "token": "w",
+        "position": 1405,
+        "max_attention": 0.734375,
+        "max_location (layer, head, row)": [
+          8,
+          28,
+          1444
+        ],
+        "avg_max_per_head": 0.020870128326350823
+      },
+      "1": {
+        "token": "asting",
+        "position": 1406,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          2,
+          15,
+          1407
+        ],
+        "avg_max_per_head": 0.053017305574030615
+      }
+    },
+    "longest": {
+      "0": {
+        "token": "long",
+        "position": 2754,
+        "max_attention": 0.42578125,
+        "max_location (layer, head, row)": [
+          2,
+          30,
+          2757
+        ],
+        "avg_max_per_head": 0.013669683219632134
+      },
+      "1": {
+        "token": "est",
+        "position": 2755,
+        "max_attention": 0.8046875,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2851
+        ],
+        "avg_max_per_head": 0.03105222814338049
+      }
+    },
+    "crazy": {
+      "0": {
+        "token": "c",
+        "position": 1467,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          1469
+        ],
+        "avg_max_per_head": 0.07483714350382797
+      },
+      "1": {
+        "token": "razy",
+        "position": 1468,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          2,
+          14,
+          1469
+        ],
+        "avg_max_per_head": 0.05030918141710572
+      }
+    },
+    "typos": {
+      "0": {
+        "token": "ty",
+        "position": 1442,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          2,
+          16,
+          1444
+        ],
+        "avg_max_per_head": 0.03379618233884685
+      },
+      "1": {
+        "token": "pos",
+        "position": 1443,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          1444
+        ],
+        "avg_max_per_head": 0.018267521227244288
+      }
+    },
+    "fixing": {
+      "0": {
+        "token": "fix",
+        "position": 1464,
+        "max_attention": 0.71484375,
+        "max_location (layer, head, row)": [
+          2,
+          10,
+          1466
+        ],
+        "avg_max_per_head": 0.02095191675471142
+      },
+      "1": {
+        "token": "ing",
+        "position": 1465,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          20,
+          21,
+          1941
+        ],
+        "avg_max_per_head": 0.07254126272164285
+      }
+    },
+    "boring": {
+      "0": {
+        "token": "b",
+        "position": 1478,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          9,
+          6,
+          1480
+        ],
+        "avg_max_per_head": 0.03028418292524293
+      },
+      "1": {
+        "token": "oring",
+        "position": 1479,
+        "max_attention": 0.88671875,
+        "max_location (layer, head, row)": [
+          2,
+          8,
+          1480
+        ],
+        "avg_max_per_head": 0.044735885894624516
+      }
+    },
+    "livestreaming": {
+      "0": {
+        "token": "liv",
+        "position": 1492,
+        "max_attention": 0.80078125,
+        "max_location (layer, head, row)": [
+          4,
+          15,
+          1498
+        ],
+        "avg_max_per_head": 0.015483694820431992
+      },
+      "1": {
+        "token": "est",
+        "position": 1493,
+        "max_attention": 0.83984375,
+        "max_location (layer, head, row)": [
+          9,
+          21,
+          1497
+        ],
+        "avg_max_per_head": 0.035857543247402646
+      },
+      "2": {
+        "token": "ream",
+        "position": 1494,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          5,
+          4,
+          1496
+        ],
+        "avg_max_per_head": 0.057991621491964906
+      },
+      "3": {
+        "token": "ing",
+        "position": 1495,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          26,
+          28,
+          1496
+        ],
+        "avg_max_per_head": 0.05858903145417571
+      }
+    },
+    "spectator": {
+      "0": {
+        "token": "spect",
+        "position": 1506,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          13,
+          29,
+          1509
+        ],
+        "avg_max_per_head": 0.052724555745953694
+      },
+      "1": {
+        "token": "ator",
+        "position": 1507,
+        "max_attention": 0.94140625,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          1508
+        ],
+        "avg_max_per_head": 0.051460518210660666
+      }
+    },
+    "weekend": {
+      "0": {
+        "token": "week",
+        "position": 1551,
+        "max_attention": 0.8984375,
+        "max_location (layer, head, row)": [
+          26,
+          1,
+          1984
+        ],
+        "avg_max_per_head": 0.015449047641595826
+      },
+      "1": {
+        "token": "end",
+        "position": 1552,
+        "max_attention": 0.94140625,
+        "max_location (layer, head, row)": [
+          5,
+          4,
+          1553
+        ],
+        "avg_max_per_head": 0.04490430993610062
+      }
+    },
+    "resting": {
+      "0": {
+        "token": "rest",
+        "position": 1582,
+        "max_attention": 0.8515625,
+        "max_location (layer, head, row)": [
+          1,
+          1,
+          1584
+        ],
+        "avg_max_per_head": 0.03310313355177641
+      },
+      "1": {
+        "token": "ing",
+        "position": 1583,
+        "max_attention": 0.90625,
+        "max_location (layer, head, row)": [
+          5,
+          9,
+          1584
+        ],
+        "avg_max_per_head": 0.043890093453228474
+      }
+    },
+    "somewhat": {
+      "0": {
+        "token": "som",
+        "position": 2651,
+        "max_attention": 0.7734375,
+        "max_location (layer, head, row)": [
+          24,
+          19,
+          2653
+        ],
+        "avg_max_per_head": 0.02117629248823505
+      },
+      "1": {
+        "token": "ewhat",
+        "position": 2652,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          26,
+          5,
+          2653
+        ],
+        "avg_max_per_head": 0.029008707933826372
+      }
+    },
+    "realistic": {
+      "0": {
+        "token": "real",
+        "position": 1613,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          1620
+        ],
+        "avg_max_per_head": 0.05222376994788647
+      },
+      "1": {
+        "token": "istic",
+        "position": 1614,
+        "max_attention": 0.8984375,
+        "max_location (layer, head, row)": [
+          9,
+          25,
+          1616
+        ],
+        "avg_max_per_head": 0.03948080976260826
+      }
+    },
+    "fitting": {
+      "0": {
+        "token": "fit",
+        "position": 1627,
+        "max_attention": 0.93359375,
+        "max_location (layer, head, row)": [
+          8,
+          25,
+          1667
+        ],
+        "avg_max_per_head": 0.05603006959427148
+      },
+      "1": {
+        "token": "ting",
+        "position": 1628,
+        "max_attention": 0.94140625,
+        "max_location (layer, head, row)": [
+          9,
+          10,
+          1631
+        ],
+        "avg_max_per_head": 0.07627781602786854
+      }
+    },
+    "mood": {
+      "0": {
+        "token": "m",
+        "position": 1630,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          9,
+          5,
+          1634
+        ],
+        "avg_max_per_head": 0.05328804749296978
+      },
+      "1": {
+        "token": "ood",
+        "position": 1631,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          1,
+          4,
+          1632
+        ],
+        "avg_max_per_head": 0.06021020110347308
+      }
+    },
+    "overboard": {
+      "0": {
+        "token": "over",
+        "position": 1640,
+        "max_attention": 0.8515625,
+        "max_location (layer, head, row)": [
+          14,
+          24,
+          1642
+        ],
+        "avg_max_per_head": 0.02983881818363443
+      },
+      "1": {
+        "token": "board",
+        "position": 1641,
+        "max_attention": 0.88671875,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          1761
+        ],
+        "avg_max_per_head": 0.0497432785195997
+      }
+    },
+    "realized": {
+      "0": {
+        "token": "real",
+        "position": 1852,
+        "max_attention": 0.66015625,
+        "max_location (layer, head, row)": [
+          4,
+          28,
+          1854
+        ],
+        "avg_max_per_head": 0.02063869166886434
+      },
+      "1": {
+        "token": "ized",
+        "position": 1853,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          5,
+          9,
+          1854
+        ],
+        "avg_max_per_head": 0.024792629934381694
+      }
+    },
+    "zoomed": {
+      "0": {
+        "token": "zoom",
+        "position": 1743,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          4,
+          11,
+          1745
+        ],
+        "avg_max_per_head": 0.034172493556980044
+      },
+      "1": {
+        "token": "ed",
+        "position": 1744,
+        "max_attention": 0.84375,
+        "max_location (layer, head, row)": [
+          2,
+          23,
+          1745
+        ],
+        "avg_max_per_head": 0.046909075521398336
+      }
+    },
+    "indicate": {
+      "0": {
+        "token": "ind",
+        "position": 1938,
+        "max_attention": 0.859375,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          1954
+        ],
+        "avg_max_per_head": 0.022567443491425365
+      },
+      "1": {
+        "token": "icate",
+        "position": 1939,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          1940
+        ],
+        "avg_max_per_head": 0.043443984497571364
+      }
+    },
+    "indicated": {
+      "0": {
+        "token": "ind",
+        "position": 1993,
+        "max_attention": 0.84765625,
+        "max_location (layer, head, row)": [
+          26,
+          13,
+          1996
+        ],
+        "avg_max_per_head": 0.0310600615630392
+      },
+      "1": {
+        "token": "icated",
+        "position": 1994,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          4,
+          27,
+          2003
+        ],
+        "avg_max_per_head": 0.05083143443334848
+      }
+    },
+    "decoration": {
+      "0": {
+        "token": "de",
+        "position": 1826,
+        "max_attention": 0.69140625,
+        "max_location (layer, head, row)": [
+          9,
+          30,
+          1868
+        ],
+        "avg_max_per_head": 0.030524998961482197
+      },
+      "1": {
+        "token": "coration",
+        "position": 1827,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          1,
+          17,
+          1828
+        ],
+        "avg_max_per_head": 0.0854243851499632
+      }
+    },
+    "denotes": {
+      "0": {
+        "token": "den",
+        "position": 1831,
+        "max_attention": 0.9140625,
+        "max_location (layer, head, row)": [
+          4,
+          8,
+          1833
+        ],
+        "avg_max_per_head": 0.05260779998206999
+      },
+      "1": {
+        "token": "otes",
+        "position": 1832,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          0,
+          27,
+          1835
+        ],
+        "avg_max_per_head": 0.0528241477732081
+      }
+    },
+    "told": {
+      "0": {
+        "token": "t",
+        "position": 1859,
+        "max_attention": 0.91796875,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          1863
+        ],
+        "avg_max_per_head": 0.018920585222076625
+      },
+      "1": {
+        "token": "old",
+        "position": 1860,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          8,
+          7,
+          1863
+        ],
+        "avg_max_per_head": 0.05999556215829216
+      }
+    },
+    "metaphor": {
+      "0": {
+        "token": "met",
+        "position": 1876,
+        "max_attention": 0.67578125,
+        "max_location (layer, head, row)": [
+          18,
+          4,
+          1887
+        ],
+        "avg_max_per_head": 0.018056976987281814
+      },
+      "1": {
+        "token": "aph",
+        "position": 1877,
+        "max_attention": 0.828125,
+        "max_location (layer, head, row)": [
+          18,
+          8,
+          1889
+        ],
+        "avg_max_per_head": 0.03812235116492957
+      },
+      "2": {
+        "token": "or",
+        "position": 1878,
+        "max_attention": 0.9140625,
+        "max_location (layer, head, row)": [
+          6,
+          25,
+          1879
+        ],
+        "avg_max_per_head": 0.04810291147441603
+      }
+    },
+    "becoming": {
+      "0": {
+        "token": "bec",
+        "position": 1894,
+        "max_attention": 0.94140625,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          1896
+        ],
+        "avg_max_per_head": 0.0239181012584595
+      },
+      "1": {
+        "token": "oming",
+        "position": 1895,
+        "max_attention": 0.94921875,
+        "max_location (layer, head, row)": [
+          8,
+          21,
+          1896
+        ],
+        "avg_max_per_head": 0.04479240966611542
+      }
+    },
+    "knows": {
+      "0": {
+        "token": "know",
+        "position": 1902,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          4,
+          29,
+          1906
+        ],
+        "avg_max_per_head": 0.01690456115466077
+      },
+      "1": {
+        "token": "s",
+        "position": 1903,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          2,
+          18,
+          1904
+        ],
+        "avg_max_per_head": 0.04956001498067053
+      }
+    },
+    "importance": {
+      "0": {
+        "token": "import",
+        "position": 1905,
+        "max_attention": 0.73046875,
+        "max_location (layer, head, row)": [
+          9,
+          18,
+          1907
+        ],
+        "avg_max_per_head": 0.022573778536752798
+      },
+      "1": {
+        "token": "ance",
+        "position": 1906,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          4,
+          28,
+          1907
+        ],
+        "avg_max_per_head": 0.04538093355949968
+      }
+    },
+    "hideous": {
+      "0": {
+        "token": "hide",
+        "position": 1950,
+        "max_attention": 0.859375,
+        "max_location (layer, head, row)": [
+          2,
+          15,
+          1952
+        ],
+        "avg_max_per_head": 0.03162408205389511
+      },
+      "1": {
+        "token": "ous",
+        "position": 1951,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          4,
+          29,
+          1952
+        ],
+        "avg_max_per_head": 0.03661625117820222
+      }
+    },
+    "Waiter": {
+      "0": {
+        "token": "Wait",
+        "position": 1968,
+        "max_attention": 0.91015625,
+        "max_location (layer, head, row)": [
+          9,
+          14,
+          2150
+        ],
+        "avg_max_per_head": 0.03334761684527621
+      },
+      "1": {
+        "token": "er",
+        "position": 1969,
+        "max_attention": 0.93359375,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2905
+        ],
+        "avg_max_per_head": 0.052350972342537716
+      }
+    },
+    "hindsight": {
+      "0": {
+        "token": "h",
+        "position": 1975,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          30,
+          13,
+          1980
+        ],
+        "avg_max_per_head": 0.05364188610110432
+      },
+      "1": {
+        "token": "indsight",
+        "position": 1976,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          19,
+          23,
+          1977
+        ],
+        "avg_max_per_head": 0.04786564037203789
+      }
+    },
+    "zooming": {
+      "0": {
+        "token": "zoom",
+        "position": 2010,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          0,
+          28,
+          2014
+        ],
+        "avg_max_per_head": 0.02764122685766779
+      },
+      "1": {
+        "token": "ing",
+        "position": 2011,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2045
+        ],
+        "avg_max_per_head": 0.05541115422965959
+      }
+    },
+    "enough": {
+      "0": {
+        "token": "en",
+        "position": 2510,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          1,
+          30,
+          2779
+        ],
+        "avg_max_per_head": 0.028303718157985713
+      },
+      "1": {
+        "token": "ough",
+        "position": 2511,
+        "max_attention": 0.8125,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2512
+        ],
+        "avg_max_per_head": 0.026286986672857893
+      }
+    },
+    "Ludum": {
+      "0": {
+        "token": "L",
+        "position": 3001,
+        "max_attention": 0.52734375,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          3046
+        ],
+        "avg_max_per_head": 0.008306782842737448
+      },
+      "1": {
+        "token": "ud",
+        "position": 3002,
+        "max_attention": 0.87890625,
+        "max_location (layer, head, row)": [
+          16,
+          31,
+          3014
+        ],
+        "avg_max_per_head": 0.026855878710193792
+      },
+      "2": {
+        "token": "um",
+        "position": 3003,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          6,
+          25,
+          3004
+        ],
+        "avg_max_per_head": 0.033523111556860385
+      }
+    },
+    "Dare": {
+      "0": {
+        "token": "D",
+        "position": 2917,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          1,
+          17,
+          2919
+        ],
+        "avg_max_per_head": 0.01532050893001724
+      },
+      "1": {
+        "token": "are",
+        "position": 2918,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          2920
+        ],
+        "avg_max_per_head": 0.024544892949052155
+      }
+    },
+    "overscoping": {
+      "0": {
+        "token": "overs",
+        "position": 2943,
+        "max_attention": 0.5703125,
+        "max_location (layer, head, row)": [
+          4,
+          8,
+          2946
+        ],
+        "avg_max_per_head": 0.01452682679814643
+      },
+      "1": {
+        "token": "c",
+        "position": 2944,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          0,
+          13,
+          2946
+        ],
+        "avg_max_per_head": 0.025015279272338375
+      },
+      "2": {
+        "token": "oping",
+        "position": 2945,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          2946
+        ],
+        "avg_max_per_head": 0.04111430355987977
+      }
+    },
+    "planned": {
+      "0": {
+        "token": "pl",
+        "position": 2088,
+        "max_attention": 0.65625,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2090
+        ],
+        "avg_max_per_head": 0.018225930849439465
+      },
+      "1": {
+        "token": "anned",
+        "position": 2089,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          20,
+          6,
+          2090
+        ],
+        "avg_max_per_head": 0.04957589623518288
+      }
+    },
+    "kinds": {
+      "0": {
+        "token": "k",
+        "position": 2083,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2085
+        ],
+        "avg_max_per_head": 0.018907287638285197
+      },
+      "1": {
+        "token": "inds",
+        "position": 2084,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          30,
+          27,
+          2088
+        ],
+        "avg_max_per_head": 0.0408490349072963
+      }
+    },
+    "Wikipedia": {
+      "0": {
+        "token": "W",
+        "position": 2091,
+        "max_attention": 0.51953125,
+        "max_location (layer, head, row)": [
+          17,
+          27,
+          2093
+        ],
+        "avg_max_per_head": 0.016357905540644424
+      },
+      "1": {
+        "token": "ikipedia",
+        "position": 2092,
+        "max_attention": 0.95703125,
+        "max_location (layer, head, row)": [
+          2,
+          15,
+          2093
+        ],
+        "avg_max_per_head": 0.03260012943064794
+      }
+    },
+    "regard": {
+      "0": {
+        "token": "reg",
+        "position": 2099,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          9,
+          14,
+          2144
+        ],
+        "avg_max_per_head": 0.0387182776175905
+      },
+      "1": {
+        "token": "ard",
+        "position": 2100,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          12,
+          24,
+          2144
+        ],
+        "avg_max_per_head": 0.03635071957251057
+      }
+    },
+    "Pastina": {
+      "0": {
+        "token": "Past",
+        "position": 2112,
+        "max_attention": 0.87109375,
+        "max_location (layer, head, row)": [
+          30,
+          24,
+          2115
+        ],
+        "avg_max_per_head": 0.022639641967543866
+      },
+      "1": {
+        "token": "ina",
+        "position": 2113,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          9,
+          31,
+          2166
+        ],
+        "avg_max_per_head": 0.0373689087209641
+      }
+    },
+    "forno": {
+      "0": {
+        "token": "f",
+        "position": 2119,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          18,
+          14,
+          2122
+        ],
+        "avg_max_per_head": 0.0385098934348207
+      },
+      "1": {
+        "token": "orno",
+        "position": 2120,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          4,
+          29,
+          2122
+        ],
+        "avg_max_per_head": 0.03285635181237012
+      }
+    },
+    "scratching": {
+      "0": {
+        "token": "scr",
+        "position": 2131,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2279
+        ],
+        "avg_max_per_head": 0.02530333850882016
+      },
+      "1": {
+        "token": "atching",
+        "position": 2132,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2133
+        ],
+        "avg_max_per_head": 0.024902007018681616
+      }
+    },
+    "barely": {
+      "0": {
+        "token": "bare",
+        "position": 2150,
+        "max_attention": 0.6796875,
+        "max_location (layer, head, row)": [
+          13,
+          19,
+          2419
+        ],
+        "avg_max_per_head": 0.014079032669542357
+      },
+      "1": {
+        "token": "ly",
+        "position": 2151,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          2,
+          8,
+          2152
+        ],
+        "avg_max_per_head": 0.031661674787756056
+      }
+    },
+    "talking": {
+      "0": {
+        "token": "t",
+        "position": 2156,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          20,
+          6,
+          2159
+        ],
+        "avg_max_per_head": 0.03716280683875084
+      },
+      "1": {
+        "token": "alking",
+        "position": 2157,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2461
+        ],
+        "avg_max_per_head": 0.0336710010888055
+      }
+    },
+    "Pastas": {
+      "0": {
+        "token": "Past",
+        "position": 2166,
+        "max_attention": 0.353515625,
+        "max_location (layer, head, row)": [
+          3,
+          14,
+          2169
+        ],
+        "avg_max_per_head": 0.012045267765643075
+      },
+      "1": {
+        "token": "as",
+        "position": 2167,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          17,
+          3,
+          2168
+        ],
+        "avg_max_per_head": 0.030361575656570494
+      }
+    },
+    "macs": {
+      "0": {
+        "token": "mac",
+        "position": 2176,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2178
+        ],
+        "avg_max_per_head": 0.023729479798930697
+      },
+      "1": {
+        "token": "s",
+        "position": 2177,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          2,
+          29,
+          2179
+        ],
+        "avg_max_per_head": 0.03520082030445337
+      }
+    },
+    "saddest": {
+      "0": {
+        "token": "sad",
+        "position": 2186,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          0,
+          27,
+          2189
+        ],
+        "avg_max_per_head": 0.02460757762310095
+      },
+      "1": {
+        "token": "dest",
+        "position": 2187,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          2,
+          16,
+          2188
+        ],
+        "avg_max_per_head": 0.02648827148368582
+      }
+    },
+    "endless": {
+      "0": {
+        "token": "end",
+        "position": 2205,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          2207
+        ],
+        "avg_max_per_head": 0.03266317633824656
+      },
+      "1": {
+        "token": "less",
+        "position": 2206,
+        "max_attention": 0.89453125,
+        "max_location (layer, head, row)": [
+          1,
+          22,
+          2212
+        ],
+        "avg_max_per_head": 0.02613791521434905
+      }
+    },
+    "loved": {
+      "0": {
+        "token": "lo",
+        "position": 2232,
+        "max_attention": 0.75390625,
+        "max_location (layer, head, row)": [
+          4,
+          22,
+          2989
+        ],
+        "avg_max_per_head": 0.018965322466101497
+      },
+      "1": {
+        "token": "ved",
+        "position": 2233,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          26,
+          5,
+          2234
+        ],
+        "avg_max_per_head": 0.022444115500547923
+      }
+    },
+    "dropped": {
+      "0": {
+        "token": "dro",
+        "position": 2251,
+        "max_attention": 0.8203125,
+        "max_location (layer, head, row)": [
+          9,
+          14,
+          2348
+        ],
+        "avg_max_per_head": 0.022581162833375856
+      },
+      "1": {
+        "token": "pped",
+        "position": 2252,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2255
+        ],
+        "avg_max_per_head": 0.025379448088642675
+      }
+    },
+    "Bolognese": {
+      "0": {
+        "token": "B",
+        "position": 2290,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          17,
+          12,
+          2294
+        ],
+        "avg_max_per_head": 0.014765972235181835
+      },
+      "1": {
+        "token": "olog",
+        "position": 2291,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2303
+        ],
+        "avg_max_per_head": 0.031355825209175237
+      },
+      "2": {
+        "token": "n",
+        "position": 2292,
+        "max_attention": 0.8046875,
+        "max_location (layer, head, row)": [
+          6,
+          6,
+          2835
+        ],
+        "avg_max_per_head": 0.020892060558253434
+      },
+      "3": {
+        "token": "ese",
+        "position": 2293,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          0,
+          1,
+          2295
+        ],
+        "avg_max_per_head": 0.040478468959918246
+      }
+    },
+    "inaccurate": {
+      "0": {
+        "token": "in",
+        "position": 2303,
+        "max_attention": 0.90234375,
+        "max_location (layer, head, row)": [
+          21,
+          28,
+          2306
+        ],
+        "avg_max_per_head": 0.0218830448720837
+      },
+      "1": {
+        "token": "accur",
+        "position": 2304,
+        "max_attention": 0.84375,
+        "max_location (layer, head, row)": [
+          18,
+          14,
+          2306
+        ],
+        "avg_max_per_head": 0.02198345781653188
+      },
+      "2": {
+        "token": "ate",
+        "position": 2305,
+        "max_attention": 0.78515625,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2338
+        ],
+        "avg_max_per_head": 0.019795103326032404
+      }
+    },
+    "Pesto": {
+      "0": {
+        "token": "P",
+        "position": 2307,
+        "max_attention": 0.58203125,
+        "max_location (layer, head, row)": [
+          5,
+          6,
+          2325
+        ],
+        "avg_max_per_head": 0.017364215367706493
+      },
+      "1": {
+        "token": "esto",
+        "position": 2308,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          2312
+        ],
+        "avg_max_per_head": 0.028669993014773354
+      }
+    },
+    "accurate": {
+      "0": {
+        "token": "accur",
+        "position": 2311,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          17,
+          12,
+          2313
+        ],
+        "avg_max_per_head": 0.025147076754365116
+      },
+      "1": {
+        "token": "ate",
+        "position": 2312,
+        "max_attention": 0.81640625,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2313
+        ],
+        "avg_max_per_head": 0.025929752533556893
+      }
+    },
+    "weaker": {
+      "0": {
+        "token": "we",
+        "position": 2322,
+        "max_attention": 0.765625,
+        "max_location (layer, head, row)": [
+          7,
+          30,
+          2333
+        ],
+        "avg_max_per_head": 0.02833626182109583
+      },
+      "1": {
+        "token": "aker",
+        "position": 2323,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          2324
+        ],
+        "avg_max_per_head": 0.032875733624678105
+      }
+    },
+    "Vodka": {
+      "0": {
+        "token": "V",
+        "position": 2329,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          20,
+          6,
+          2333
+        ],
+        "avg_max_per_head": 0.02854623887105845
+      },
+      "1": {
+        "token": "odka",
+        "position": 2330,
+        "max_attention": 0.95703125,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2331
+        ],
+        "avg_max_per_head": 0.023345870366028976
+      }
+    },
+    "triggers": {
+      "0": {
+        "token": "tr",
+        "position": 2333,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          30,
+          13,
+          2341
+        ],
+        "avg_max_per_head": 0.02760844626754988
+      },
+      "1": {
+        "token": "iggers",
+        "position": 2334,
+        "max_attention": 0.9296875,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2411
+        ],
+        "avg_max_per_head": 0.03215545382408891
+      }
+    },
+    "bolognese": {
+      "0": {
+        "token": "b",
+        "position": 2382,
+        "max_attention": 0.87109375,
+        "max_location (layer, head, row)": [
+          1,
+          22,
+          2390
+        ],
+        "avg_max_per_head": 0.01786978427116992
+      },
+      "1": {
+        "token": "olog",
+        "position": 2383,
+        "max_attention": 0.86328125,
+        "max_location (layer, head, row)": [
+          1,
+          2,
+          2386
+        ],
+        "avg_max_per_head": 0.014213362577720545
+      },
+      "2": {
+        "token": "n",
+        "position": 2384,
+        "max_attention": 0.6953125,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2692
+        ],
+        "avg_max_per_head": 0.015238836014759727
+      },
+      "3": {
+        "token": "ese",
+        "position": 2385,
+        "max_attention": 0.921875,
+        "max_location (layer, head, row)": [
+          12,
+          27,
+          2386
+        ],
+        "avg_max_per_head": 0.01883963005093392
+      }
+    },
+    "toll": {
+      "0": {
+        "token": "t",
+        "position": 2405,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          0,
+          27,
+          2419
+        ],
+        "avg_max_per_head": 0.022478041999420384
+      },
+      "1": {
+        "token": "oll",
+        "position": 2406,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          0,
+          6,
+          2407
+        ],
+        "avg_max_per_head": 0.02329118421766907
+      }
+    },
+    "believe": {
+      "0": {
+        "token": "bel",
+        "position": 2422,
+        "max_attention": 0.984375,
+        "max_location (layer, head, row)": [
+          30,
+          13,
+          2424
+        ],
+        "avg_max_per_head": 0.027835375018185005
+      },
+      "1": {
+        "token": "ieve",
+        "position": 2423,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          29,
+          10,
+          2424
+        ],
+        "avg_max_per_head": 0.04773420619312674
+      }
+    },
+    "forgetting": {
+      "0": {
+        "token": "forget",
+        "position": 2443,
+        "max_attention": 0.6015625,
+        "max_location (layer, head, row)": [
+          0,
+          17,
+          2490
+        ],
+        "avg_max_per_head": 0.017145667756267358
+      },
+      "1": {
+        "token": "ting",
+        "position": 2444,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          30,
+          21,
+          2445
+        ],
+        "avg_max_per_head": 0.03314981587755028
+      }
+    },
+    "shortcuts": {
+      "0": {
+        "token": "short",
+        "position": 2470,
+        "max_attention": 0.91796875,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2525
+        ],
+        "avg_max_per_head": 0.015416032299981453
+      },
+      "1": {
+        "token": "cuts",
+        "position": 2471,
+        "max_attention": 0.875,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2472
+        ],
+        "avg_max_per_head": 0.026711271915701218
+      }
+    },
+    "singletons": {
+      "0": {
+        "token": "single",
+        "position": 2486,
+        "max_attention": 0.8515625,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2488
+        ],
+        "avg_max_per_head": 0.02482980999411666
+      },
+      "1": {
+        "token": "tons",
+        "position": 2487,
+        "max_attention": 0.87890625,
+        "max_location (layer, head, row)": [
+          28,
+          10,
+          2488
+        ],
+        "avg_max_per_head": 0.02791018527932465
+      }
+    },
+    "observers": {
+      "0": {
+        "token": "obs",
+        "position": 2497,
+        "max_attention": 0.7265625,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          2499
+        ],
+        "avg_max_per_head": 0.024026397499255836
+      },
+      "1": {
+        "token": "ervers",
+        "position": 2498,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2499
+        ],
+        "avg_max_per_head": 0.02359167064423673
+      }
+    },
+    "sour": {
+      "0": {
+        "token": "s",
+        "position": 2517,
+        "max_attention": 0.5859375,
+        "max_location (layer, head, row)": [
+          4,
+          0,
+          2520
+        ],
+        "avg_max_per_head": 0.0202659971328103
+      },
+      "1": {
+        "token": "our",
+        "position": 2518,
+        "max_attention": 0.92578125,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2520
+        ],
+        "avg_max_per_head": 0.02350058029696811
+      }
+    },
+    "taste": {
+      "0": {
+        "token": "t",
+        "position": 2519,
+        "max_attention": 0.6328125,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2894
+        ],
+        "avg_max_per_head": 0.014028708719706628
+      },
+      "1": {
+        "token": "aste",
+        "position": 2520,
+        "max_attention": 0.9765625,
+        "max_location (layer, head, row)": [
+          17,
+          16,
+          2521
+        ],
+        "avg_max_per_head": 0.038137582516355906
+      }
+    },
+    "survive": {
+      "0": {
+        "token": "sur",
+        "position": 2538,
+        "max_attention": 0.74609375,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2654
+        ],
+        "avg_max_per_head": 0.014801659104705323
+      },
+      "1": {
+        "token": "v",
+        "position": 2539,
+        "max_attention": 0.9453125,
+        "max_location (layer, head, row)": [
+          30,
+          21,
+          2543
+        ],
+        "avg_max_per_head": 0.02629514735599514
+      },
+      "2": {
+        "token": "ive",
+        "position": 2540,
+        "max_attention": 0.83984375,
+        "max_location (layer, head, row)": [
+          4,
+          10,
+          2542
+        ],
+        "avg_max_per_head": 0.020473915559705347
+      }
+    },
+    "timeframe": {
+      "0": {
+        "token": "time",
+        "position": 2572,
+        "max_attention": 0.890625,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2776
+        ],
+        "avg_max_per_head": 0.022416962077841163
+      },
+      "1": {
+        "token": "frame",
+        "position": 2573,
+        "max_attention": 0.98828125,
+        "max_location (layer, head, row)": [
+          20,
+          21,
+          2575
+        ],
+        "avg_max_per_head": 0.040410020475974306
+      }
+    },
+    "accelerated": {
+      "0": {
+        "token": "accel",
+        "position": 2599,
+        "max_attention": 0.76953125,
+        "max_location (layer, head, row)": [
+          8,
+          11,
+          2787
+        ],
+        "avg_max_per_head": 0.021003911599109415
+      },
+      "1": {
+        "token": "er",
+        "position": 2600,
+        "max_attention": 0.8203125,
+        "max_location (layer, head, row)": [
+          30,
+          21,
+          2603
+        ],
+        "avg_max_per_head": 0.019848209671181394
+      },
+      "2": {
+        "token": "ated",
+        "position": 2601,
+        "max_attention": 0.88671875,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2602
+        ],
+        "avg_max_per_head": 0.021258165761537384
+      }
+    },
+    "knew": {
+      "0": {
+        "token": "k",
+        "position": 2616,
+        "max_attention": 0.96484375,
+        "max_location (layer, head, row)": [
+          20,
+          21,
+          2619
+        ],
+        "avg_max_per_head": 0.017185555334435776
+      },
+      "1": {
+        "token": "new",
+        "position": 2617,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          2,
+          15,
+          2618
+        ],
+        "avg_max_per_head": 0.0328726857987931
+      }
+    },
+    "itself": {
+      "0": {
+        "token": "it",
+        "position": 2869,
+        "max_attention": 0.9140625,
+        "max_location (layer, head, row)": [
+          2,
+          26,
+          2871
+        ],
+        "avg_max_per_head": 0.014936227584257722
+      },
+      "1": {
+        "token": "self",
+        "position": 2870,
+        "max_attention": 0.87890625,
+        "max_location (layer, head, row)": [
+          2,
+          13,
+          2871
+        ],
+        "avg_max_per_head": 0.0292295935068978
+      }
+    },
+    "uneasy": {
+      "0": {
+        "token": "une",
+        "position": 2653,
+        "max_attention": 0.65625,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2655
+        ],
+        "avg_max_per_head": 0.021387515982496552
+      },
+      "1": {
+        "token": "asy",
+        "position": 2654,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          2,
+          26,
+          2656
+        ],
+        "avg_max_per_head": 0.031175481824902818
+      }
+    },
+    "deeply": {
+      "0": {
+        "token": "deep",
+        "position": 2683,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          14,
+          27,
+          2960
+        ],
+        "avg_max_per_head": 0.019274419821158517
+      },
+      "1": {
+        "token": "ly",
+        "position": 2684,
+        "max_attention": 0.8984375,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2685
+        ],
+        "avg_max_per_head": 0.021216684028331656
+      }
+    },
+    "conundrum": {
+      "0": {
+        "token": "con",
+        "position": 2690,
+        "max_attention": 0.82421875,
+        "max_location (layer, head, row)": [
+          1,
+          0,
+          2703
+        ],
+        "avg_max_per_head": 0.013703526281460654
+      },
+      "1": {
+        "token": "und",
+        "position": 2691,
+        "max_attention": 0.91796875,
+        "max_location (layer, head, row)": [
+          2,
+          29,
+          2693
+        ],
+        "avg_max_per_head": 0.024248484092822764
+      },
+      "2": {
+        "token": "rum",
+        "position": 2692,
+        "max_attention": 0.93359375,
+        "max_location (layer, head, row)": [
+          6,
+          25,
+          2693
+        ],
+        "avg_max_per_head": 0.014428330163354985
+      }
+    },
+    "learned": {
+      "0": {
+        "token": "learn",
+        "position": 2928,
+        "max_attention": 0.64453125,
+        "max_location (layer, head, row)": [
+          3,
+          25,
+          2943
+        ],
+        "avg_max_per_head": 0.01832297831424512
+      },
+      "1": {
+        "token": "ed",
+        "position": 2929,
+        "max_attention": 0.99609375,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          2930
+        ],
+        "avg_max_per_head": 0.029179109220422106
+      }
+    },
+    "obvious": {
+      "0": {
+        "token": "ob",
+        "position": 2732,
+        "max_attention": 0.7421875,
+        "max_location (layer, head, row)": [
+          8,
+          19,
+          2744
+        ],
+        "avg_max_per_head": 0.013832911936333403
+      },
+      "1": {
+        "token": "vious",
+        "position": 2733,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          26,
+          5,
+          2734
+        ],
+        "avg_max_per_head": 0.036278841143939644
+      }
+    },
+    "explaining": {
+      "0": {
+        "token": "expl",
+        "position": 2757,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          8,
+          7,
+          2763
+        ],
+        "avg_max_per_head": 0.02625281044311123
+      },
+      "1": {
+        "token": "aining",
+        "position": 2758,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          12,
+          24,
+          2853
+        ],
+        "avg_max_per_head": 0.028292272239923477
+      }
+    },
+    "exactly": {
+      "0": {
+        "token": "ex",
+        "position": 2772,
+        "max_attention": 0.80078125,
+        "max_location (layer, head, row)": [
+          30,
+          21,
+          2774
+        ],
+        "avg_max_per_head": 0.02489959934609942
+      },
+      "1": {
+        "token": "actly",
+        "position": 2773,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          4,
+          29,
+          2774
+        ],
+        "avg_max_per_head": 0.02411532920814352
+      }
+    },
+    "ultimately": {
+      "0": {
+        "token": "ult",
+        "position": 2783,
+        "max_attention": 0.80078125,
+        "max_location (layer, head, row)": [
+          0,
+          17,
+          2806
+        ],
+        "avg_max_per_head": 0.014647971882368438
+      },
+      "1": {
+        "token": "imately",
+        "position": 2784,
+        "max_attention": 0.8671875,
+        "max_location (layer, head, row)": [
+          30,
+          24,
+          2786
+        ],
+        "avg_max_per_head": 0.022225682107091416
+      }
+    },
+    "faced": {
+      "0": {
+        "token": "f",
+        "position": 2785,
+        "max_attention": 0.69921875,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2852
+        ],
+        "avg_max_per_head": 0.011271885706264584
+      },
+      "1": {
+        "token": "aced",
+        "position": 2786,
+        "max_attention": 0.78125,
+        "max_location (layer, head, row)": [
+          6,
+          20,
+          2787
+        ],
+        "avg_max_per_head": 0.022008799733157502
+      }
+    },
+    "understand": {
+      "0": {
+        "token": "under",
+        "position": 2859,
+        "max_attention": 0.56640625,
+        "max_location (layer, head, row)": [
+          20,
+          21,
+          2861
+        ],
+        "avg_max_per_head": 0.010271065333654406
+      },
+      "1": {
+        "token": "stand",
+        "position": 2860,
+        "max_attention": 0.859375,
+        "max_location (layer, head, row)": [
+          9,
+          14,
+          3116
+        ],
+        "avg_max_per_head": 0.021752028758783126
+      }
+    },
+    "introductory": {
+      "0": {
+        "token": "intro",
+        "position": 2816,
+        "max_attention": 0.9609375,
+        "max_location (layer, head, row)": [
+          10,
+          15,
+          2835
+        ],
+        "avg_max_per_head": 0.023498310692957602
+      },
+      "1": {
+        "token": "ductory",
+        "position": 2817,
+        "max_attention": 0.97265625,
+        "max_location (layer, head, row)": [
+          8,
+          22,
+          2819
+        ],
+        "avg_max_per_head": 0.03092851216206327
+      }
+    },
+    "beginning": {
+      "0": {
+        "token": "begin",
+        "position": 2821,
+        "max_attention": 0.52734375,
+        "max_location (layer, head, row)": [
+          4,
+          28,
+          2823
+        ],
+        "avg_max_per_head": 0.015373078054835787
+      },
+      "1": {
+        "token": "ning",
+        "position": 2822,
+        "max_attention": 0.85546875,
+        "max_location (layer, head, row)": [
+          1,
+          15,
+          2823
+        ],
+        "avg_max_per_head": 0.02342769889946794
+      }
+    },
+    "importantly": {
+      "0": {
+        "token": "important",
+        "position": 2834,
+        "max_attention": 0.9375,
+        "max_location (layer, head, row)": [
+          9,
+          14,
+          2900
+        ],
+        "avg_max_per_head": 0.019461176401819102
+      },
+      "1": {
+        "token": "ly",
+        "position": 2835,
+        "max_attention": 0.91796875,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2838
+        ],
+        "avg_max_per_head": 0.02776779613850522
+      }
+    },
+    "simplified": {
+      "0": {
+        "token": "s",
+        "position": 2845,
+        "max_attention": 0.8125,
+        "max_location (layer, head, row)": [
+          7,
+          11,
+          2847
+        ],
+        "avg_max_per_head": 0.020004554357001325
+      },
+      "1": {
+        "token": "implified",
+        "position": 2846,
+        "max_attention": 0.96875,
+        "max_location (layer, head, row)": [
+          0,
+          16,
+          2847
+        ],
+        "avg_max_per_head": 0.01149367403195356
+      }
+    },
+    "easier": {
+      "0": {
+        "token": "e",
+        "position": 2854,
+        "max_attention": 0.88671875,
+        "max_location (layer, head, row)": [
+          8,
+          22,
+          2856
+        ],
+        "avg_max_per_head": 0.017594268361790455
+      },
+      "1": {
+        "token": "asier",
+        "position": 2855,
+        "max_attention": 0.86328125,
+        "max_location (layer, head, row)": [
+          0,
+          6,
+          2856
+        ],
+        "avg_max_per_head": 0.02143419841740979
+      }
+    },
+    "approachable": {
+      "0": {
+        "token": "appro",
+        "position": 2885,
+        "max_attention": 0.6171875,
+        "max_location (layer, head, row)": [
+          1,
+          22,
+          2889
+        ],
+        "avg_max_per_head": 0.014492473830614472
+      },
+      "1": {
+        "token": "achable",
+        "position": 2886,
+        "max_attention": 0.8828125,
+        "max_location (layer, head, row)": [
+          30,
+          13,
+          2890
+        ],
+        "avg_max_per_head": 0.024981128379295114
+      }
+    },
+    "understandable": {
+      "0": {
+        "token": "under",
+        "position": 2888,
+        "max_attention": 0.9140625,
+        "max_location (layer, head, row)": [
+          18,
+          7,
+          2891
+        ],
+        "avg_max_per_head": 0.01408202484708454
+      },
+      "1": {
+        "token": "stand",
+        "position": 2889,
+        "max_attention": 0.625,
+        "max_location (layer, head, row)": [
+          14,
+          31,
+          2891
+        ],
+        "avg_max_per_head": 0.017083092931898136
+      },
+      "2": {
+        "token": "able",
+        "position": 2890,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          2891
+        ],
+        "avg_max_per_head": 0.024601909706689185
+      }
+    },
+    "extremely": {
+      "0": {
+        "token": "ext",
+        "position": 2896,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          16,
+          20,
+          2898
+        ],
+        "avg_max_per_head": 0.02072282735207409
+      },
+      "1": {
+        "token": "remely",
+        "position": 2897,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          2,
+          8,
+          2898
+        ],
+        "avg_max_per_head": 0.020505142325419
+      }
+    },
+    "Decker": {
+      "0": {
+        "token": "De",
+        "position": 2949,
+        "max_attention": 0.8203125,
+        "max_location (layer, head, row)": [
+          30,
+          12,
+          2951
+        ],
+        "avg_max_per_head": 0.01620501897559734
+      },
+      "1": {
+        "token": "cker",
+        "position": 2950,
+        "max_attention": 1.0,
+        "max_location (layer, head, row)": [
+          4,
+          31,
+          2953
+        ],
+        "avg_max_per_head": 0.04001918617723277
+      }
+    },
+    "scoping": {
+      "0": {
+        "token": "sc",
+        "position": 2965,
+        "max_attention": 0.48828125,
+        "max_location (layer, head, row)": [
+          9,
+          25,
+          2967
+        ],
+        "avg_max_per_head": 0.012131643232351053
+      },
+      "1": {
+        "token": "oping",
+        "position": 2966,
+        "max_attention": 0.98046875,
+        "max_location (layer, head, row)": [
+          28,
+          10,
+          2967
+        ],
+        "avg_max_per_head": 0.02341020125459181
+      }
+    },
+    "beforehand": {
+      "0": {
+        "token": "before",
+        "position": 2973,
+        "max_attention": 0.5703125,
+        "max_location (layer, head, row)": [
+          1,
+          16,
+          2976
+        ],
+        "avg_max_per_head": 0.020141112407145556
+      },
+      "1": {
+        "token": "hand",
+        "position": 2974,
+        "max_attention": 0.953125,
+        "max_location (layer, head, row)": [
+          6,
+          15,
+          2992
+        ],
+        "avg_max_per_head": 0.025399589183507487
+      }
+    },
+    "Dares": {
+      "0": {
+        "token": "D",
+        "position": 3004,
+        "max_attention": 0.6171875,
+        "max_location (layer, head, row)": [
+          12,
+          27,
+          3006
+        ],
+        "avg_max_per_head": 0.01050697629671049
+      },
+      "1": {
+        "token": "ares",
+        "position": 3005,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          28,
+          10,
+          3006
+        ],
+        "avg_max_per_head": 0.03470648897564388
+      }
+    },
+    "platforms": {
+      "0": {
+        "token": "platform",
+        "position": 3034,
+        "max_attention": 0.71484375,
+        "max_location (layer, head, row)": [
+          16,
+          4,
+          3084
+        ],
+        "avg_max_per_head": 0.017239154749404406
+      },
+      "1": {
+        "token": "s",
+        "position": 3035,
+        "max_attention": 0.9453125,
+        "max_location (layer, head, row)": [
+          2,
+          8,
+          3036
+        ],
+        "avg_max_per_head": 0.02335011342074722
+      }
+    },
+    "filed": {
+      "0": {
+        "token": "file",
+        "position": 3110,
+        "max_attention": 0.9921875,
+        "max_location (layer, head, row)": [
+          29,
+          11,
+          3112
+        ],
+        "avg_max_per_head": 0.03079085849344665
+      },
+      "1": {
+        "token": "d",
+        "position": 3111,
+        "max_attention": 0.875,
+        "max_location (layer, head, row)": [
+          1,
+          2,
+          3112
+        ],
+        "avg_max_per_head": 0.01727031918198918
+      }
+    }
+  },
+  "max_summary": {
+    "Survival": {
+      "Surv": 0.94140625,
+      "ival": 0.8046875
+    },
+    "Tastiest": {
+      "T": 0.3984375,
+      "ast": 0.91015625,
+      "iest": 0.8203125
+    },
+    "confusing": {
+      "conf": 0.6875,
+      "using": 0.96484375
+    },
+    "insted": {
+      "inst": 0.9921875,
+      "ed": 1.0
+    },
+    "typical": {
+      "typ": 0.59765625,
+      "ical": 0.9921875
+    },
+    "hardest": {
+      "har": 0.98828125,
+      "dest": 1.0
+    },
+    "gameplay": {
+      "game": 0.859375,
+      "play": 0.9375
+    },
+    "enemies": {
+      "en": 0.88671875,
+      "emies": 0.99609375
+    },
+    "confident": {
+      "conf": 0.97265625,
+      "ident": 0.97265625
+    },
+    "Evolution": {
+      "Ev": 0.921875,
+      "olution": 0.98828125
+    },
+    "evolution": {
+      "ev": 0.91796875,
+      "olution": 0.92578125
+    },
+    "unassisted": {
+      "un": 0.8828125,
+      "ass": 0.98828125,
+      "isted": 0.98046875
+    },
+    "happens": {
+      "h": 0.96484375,
+      "app": 0.96875,
+      "ens": 0.98828125
+    },
+    "several": {
+      "se": 0.71484375,
+      "veral": 0.99609375
+    },
+    "seemingly": {
+      "se": 0.578125,
+      "em": 0.71484375,
+      "ingly": 0.4609375
+    },
+    "permutation": {
+      "per": 0.8828125,
+      "mutation": 0.99609375
+    },
+    "surviving": {
+      "sur": 0.9296875,
+      "v": 0.82421875,
+      "iving": 0.9765625
+    },
+    "genetic": {
+      "gen": 0.98828125,
+      "etic": 0.99609375
+    },
+    "simulator": {
+      "sim": 0.96875,
+      "ulator": 0.9609375
+    },
+    "opinion": {
+      "op": 0.91015625,
+      "inion": 0.9921875
+    },
+    "facing": {
+      "f": 0.92578125,
+      "acing": 0.9609375
+    },
+    "goes": {
+      "go": 0.93359375,
+      "es": 0.94921875
+    },
+    "supposed": {
+      "sup": 0.486328125,
+      "posed": 0.890625
+    },
+    "evolve": {
+      "ev": 0.87109375,
+      "olve": 0.9375
+    },
+    "anymore": {
+      "an": 0.890625,
+      "ym": 0.98046875,
+      "ore": 0.984375
+    },
+    "equivalent": {
+      "equ": 0.98828125,
+      "ivalent": 0.9921875
+    },
+    "intelligent": {
+      "int": 0.84375,
+      "elligent": 0.9296875
+    },
+    "fable": {
+      "f": 0.91015625,
+      "able": 0.94921875
+    },
+    "invented": {
+      "in": 0.98828125,
+      "vented": 0.97265625
+    },
+    "creationists": {
+      "creation": 1.0,
+      "ists": 1.0
+    },
+    "Pastafarian": {
+      "Past": 0.8046875,
+      "af": 0.94140625,
+      "arian": 0.95703125
+    },
+    "rubbed": {
+      "rub": 0.97265625,
+      "bed": 0.953125
+    },
+    "Hence": {
+      "H": 0.9296875,
+      "ence": 1.0
+    },
+    "biggest": {
+      "big": 0.87890625,
+      "gest": 0.98828125
+    },
+    "dillema": {
+      "d": 0.86328125,
+      "ille": 0.953125,
+      "ma": 0.98046875
+    },
+    "deciding": {
+      "dec": 0.55859375,
+      "iding": 0.81640625
+    },
+    "wrongly": {
+      "wrong": 0.6953125,
+      "ly": 0.921875
+    },
+    "contestant": {
+      "contest": 0.859375,
+      "ant": 0.99609375
+    },
+    "judging": {
+      "jud": 0.87109375,
+      "ging": 0.94140625
+    },
+    "artificial": {
+      "art": 0.83203125,
+      "ificial": 0.94921875
+    },
+    "somehow": {
+      "some": 0.8203125,
+      "how": 0.953125
+    },
+    "Alas": {
+      "Al": 0.859375,
+      "as": 0.96484375
+    },
+    "decided": {
+      "dec": 0.92578125,
+      "ided": 0.9921875
+    },
+    "myself": {
+      "my": 0.98046875,
+      "self": 0.85546875
+    },
+    "humanity": {
+      "human": 0.98046875,
+      "ity": 0.98046875
+    },
+    "tried": {
+      "tr": 0.90625,
+      "ied": 1.0
+    },
+    "foe": {
+      "fo": 0.7421875,
+      "e": 0.9609375
+    },
+    "souls": {
+      "s": 0.9140625,
+      "ou": 0.99609375,
+      "ls": 0.99609375
+    },
+    "flying": {
+      "f": 0.99609375,
+      "lying": 1.0
+    },
+    "towards": {
+      "t": 0.99609375,
+      "owards": 0.98046875
+    },
+    "monolith": {
+      "mon": 0.6953125,
+      "olith": 0.890625
+    },
+    "Odyssey": {
+      "Od": 0.9375,
+      "yssey": 0.98828125
+    },
+    "compelling": {
+      "comp": 0.8828125,
+      "elling": 0.99609375
+    },
+    "mechanics": {
+      "me": 0.953125,
+      "chan": 0.95703125,
+      "ics": 0.9765625
+    },
+    "Borgs": {
+      "B": 0.71484375,
+      "org": 0.95703125,
+      "s": 1.0
+    },
+    "inspiration": {
+      "ins": 0.59375,
+      "piration": 0.96875
+    },
+    "hypothesis": {
+      "h": 0.86328125,
+      "ypo": 0.90625,
+      "thesis": 0.984375
+    },
+    "fighting": {
+      "fight": 0.99609375,
+      "ing": 0.9921875
+    },
+    "Borg": {
+      "B": 0.984375,
+      "org": 0.96484375
+    },
+    "girlfriend": {
+      "girl": 0.77734375,
+      "friend": 0.9921875
+    },
+    "gave": {
+      "g": 0.9609375,
+      "ave": 0.91796875
+    },
+    "Pasta": {
+      "P": 0.70703125,
+      "asta": 0.953125
+    },
+    "sounded": {
+      "s": 0.77734375,
+      "ounded": 0.94921875
+    },
+    "Conversations": {
+      "Con": 0.86328125,
+      "versations": 0.9375
+    },
+    "inspiring": {
+      "ins": 0.9375,
+      "piring": 0.98046875
+    },
+    "Roushey": {
+      "R": 0.68359375,
+      "ous": 0.9453125,
+      "hey": 0.9765625
+    },
+    "Mechanical": {
+      "Mech": 0.5234375,
+      "anical": 0.98828125
+    },
+    "Underdogs": {
+      "Under": 0.8515625,
+      "dogs": 0.97265625
+    },
+    "further": {
+      "f": 0.75,
+      "urther": 0.9765625
+    },
+    "matured": {
+      "m": 0.875,
+      "ature": 0.98828125,
+      "d": 0.9375
+    },
+    "involved": {
+      "inv": 0.416015625,
+      "olved": 0.80078125
+    },
+    "pasta": {
+      "p": 0.328125,
+      "asta": 0.83984375
+    },
+    "became": {
+      "bec": 0.8515625,
+      "ame": 0.99609375
+    },
+    "Spaghetti": {
+      "Sp": 0.98828125,
+      "aghetti": 0.89453125
+    },
+    "evolving": {
+      "ev": 0.796875,
+      "olving": 0.96484375
+    },
+    "dinner": {
+      "d": 0.86328125,
+      "inner": 0.94921875
+    },
+    "evolved": {
+      "ev": 0.9609375,
+      "olved": 0.96875
+    },
+    "sitting": {
+      "s": 0.875,
+      "itting": 0.9375
+    },
+    "guests": {
+      "guest": 0.7421875,
+      "s": 0.91796875
+    },
+    "pastas": {
+      "past": 0.85546875,
+      "as": 0.96875
+    },
+    "faster": {
+      "f": 0.8671875,
+      "aster": 0.96875
+    },
+    "stronger": {
+      "strong": 0.94921875,
+      "er": 0.984375
+    },
+    "varying": {
+      "vary": 0.98828125,
+      "ing": 0.921875
+    },
+    "costs": {
+      "cost": 0.9296875,
+      "s": 0.9921875
+    },
+    "debited": {
+      "deb": 0.93359375,
+      "ited": 0.90234375
+    },
+    "spawned": {
+      "spawn": 0.875,
+      "ed": 1.0
+    },
+    "instinct": {
+      "inst": 0.76953125,
+      "inct": 0.99609375
+    },
+    "conquer": {
+      "con": 0.64453125,
+      "quer": 0.9140625
+    },
+    "autonomous": {
+      "aut": 0.859375,
+      "onomous": 0.87890625
+    },
+    "DotA": {
+      "Dot": 0.96875,
+      "A": 0.99609375
+    },
+    "LoL": {
+      "Lo": 0.90625,
+      "L": 0.98046875
+    },
+    "creeps": {
+      "cre": 0.66796875,
+      "eps": 0.96875
+    },
+    "sauce": {
+      "s": 0.703125,
+      "auce": 0.93359375
+    },
+    "dies": {
+      "d": 0.79296875,
+      "ies": 0.92578125
+    },
+    "vicinity": {
+      "vic": 0.828125,
+      "inity": 0.984375
+    },
+    "conquering": {
+      "con": 0.76171875,
+      "qu": 0.66796875,
+      "ering": 0.921875
+    },
+    "conquered": {
+      "con": 0.98046875,
+      "qu": 0.85546875,
+      "ered": 0.9921875
+    },
+    "Battlefield": {
+      "Battle": 0.921875,
+      "field": 0.9921875
+    },
+    "Conquest": {
+      "Con": 0.73828125,
+      "quest": 0.99609375
+    },
+    "bistro": {
+      "b": 0.91796875,
+      "istro": 0.96484375
+    },
+    "Bistro": {
+      "B": 0.59375,
+      "istro": 0.87890625
+    },
+    "founder": {
+      "found": 0.87890625,
+      "er": 0.8984375
+    },
+    "FDT": {
+      "F": 0.78125,
+      "DT": 0.94921875
+    },
+    "Starling": {
+      "Star": 0.546875,
+      "ling": 0.98046875
+    },
+    "ActionScript": {
+      "Action": 0.9296875,
+      "Script": 0.984375
+    },
+    "frameworks": {
+      "framework": 0.466796875,
+      "s": 0.8046875
+    },
+    "livestreamed": {
+      "liv": 0.796875,
+      "est": 0.796875,
+      "ream": 0.94140625,
+      "ed": 0.97265625
+    },
+    "twitch": {
+      "t": 0.98828125,
+      "witch": 0.98046875
+    },
+    "XSplit": {
+      "X": 0.8984375,
+      "Split": 0.9453125
+    },
+    "amazing": {
+      "am": 0.97265625,
+      "azing": 0.99609375
+    },
+    "livestream": {
+      "liv": 0.8828125,
+      "est": 0.9921875,
+      "ream": 0.9609375
+    },
+    "effortless": {
+      "eff": 0.59375,
+      "ort": 0.64453125,
+      "less": 0.8046875
+    },
+    "interact": {
+      "inter": 0.9296875,
+      "act": 0.96875
+    },
+    "knowing": {
+      "know": 0.9375,
+      "ing": 0.99609375
+    },
+    "recording": {
+      "rec": 0.9453125,
+      "ording": 0.90625
+    },
+    "timelapse": {
+      "tim": 0.8359375,
+      "el": 0.96484375,
+      "apse": 0.9921875
+    },
+    "recorded": {
+      "record": 0.9609375,
+      "ed": 0.9375
+    },
+    "watching": {
+      "watch": 0.4921875,
+      "ing": 0.984375
+    },
+    "shoulder": {
+      "should": 0.93359375,
+      "er": 0.9453125
+    },
+    "realize": {
+      "real": 0.95703125,
+      "ize": 0.9921875
+    },
+    "spend": {
+      "sp": 0.6484375,
+      "end": 0.9765625
+    },
+    "inane": {
+      "in": 0.98828125,
+      "ane": 0.9765625
+    },
+    "wasting": {
+      "w": 0.734375,
+      "asting": 0.97265625
+    },
+    "longest": {
+      "long": 0.42578125,
+      "est": 0.8046875
+    },
+    "crazy": {
+      "c": 0.984375,
+      "razy": 0.97265625
+    },
+    "typos": {
+      "ty": 0.94921875,
+      "pos": 0.96484375
+    },
+    "fixing": {
+      "fix": 0.71484375,
+      "ing": 0.96875
+    },
+    "boring": {
+      "b": 0.984375,
+      "oring": 0.88671875
+    },
+    "livestreaming": {
+      "liv": 0.80078125,
+      "est": 0.83984375,
+      "ream": 0.98046875,
+      "ing": 0.9921875
+    },
+    "spectator": {
+      "spect": 0.8828125,
+      "ator": 0.94140625
+    },
+    "weekend": {
+      "week": 0.8984375,
+      "end": 0.94140625
+    },
+    "resting": {
+      "rest": 0.8515625,
+      "ing": 0.90625
+    },
+    "somewhat": {
+      "som": 0.7734375,
+      "ewhat": 0.953125
+    },
+    "realistic": {
+      "real": 0.984375,
+      "istic": 0.8984375
+    },
+    "fitting": {
+      "fit": 0.93359375,
+      "ting": 0.94140625
+    },
+    "mood": {
+      "m": 0.984375,
+      "ood": 0.9765625
+    },
+    "overboard": {
+      "over": 0.8515625,
+      "board": 0.88671875
+    },
+    "realized": {
+      "real": 0.66015625,
+      "ized": 1.0
+    },
+    "zoomed": {
+      "zoom": 0.8828125,
+      "ed": 0.84375
+    },
+    "indicate": {
+      "ind": 0.859375,
+      "icate": 0.98046875
+    },
+    "indicated": {
+      "ind": 0.84765625,
+      "icated": 0.98828125
+    },
+    "decoration": {
+      "de": 0.69140625,
+      "coration": 0.984375
+    },
+    "denotes": {
+      "den": 0.9140625,
+      "otes": 0.99609375
+    },
+    "told": {
+      "t": 0.91796875,
+      "old": 0.99609375
+    },
+    "metaphor": {
+      "met": 0.67578125,
+      "aph": 0.828125,
+      "or": 0.9140625
+    },
+    "becoming": {
+      "bec": 0.94140625,
+      "oming": 0.94921875
+    },
+    "knows": {
+      "know": 0.9765625,
+      "s": 0.9375
+    },
+    "importance": {
+      "import": 0.73046875,
+      "ance": 0.99609375
+    },
+    "hideous": {
+      "hide": 0.859375,
+      "ous": 0.99609375
+    },
+    "Waiter": {
+      "Wait": 0.91015625,
+      "er": 0.93359375
+    },
+    "hindsight": {
+      "h": 1.0,
+      "indsight": 0.98828125
+    },
+    "zooming": {
+      "zoom": 1.0,
+      "ing": 0.98828125
+    },
+    "enough": {
+      "en": 0.96875,
+      "ough": 0.8125
+    },
+    "Ludum": {
+      "L": 0.52734375,
+      "ud": 0.87890625,
+      "um": 0.9375
+    },
+    "Dare": {
+      "D": 0.8828125,
+      "are": 0.953125
+    },
+    "overscoping": {
+      "overs": 0.5703125,
+      "c": 0.99609375,
+      "oping": 0.98046875
+    },
+    "planned": {
+      "pl": 0.65625,
+      "anned": 1.0
+    },
+    "kinds": {
+      "k": 0.97265625,
+      "inds": 0.97265625
+    },
+    "Wikipedia": {
+      "W": 0.51953125,
+      "ikipedia": 0.95703125
+    },
+    "regard": {
+      "reg": 0.9765625,
+      "ard": 0.98828125
+    },
+    "Pastina": {
+      "Past": 0.87109375,
+      "ina": 1.0
+    },
+    "forno": {
+      "f": 0.9765625,
+      "orno": 0.97265625
+    },
+    "scratching": {
+      "scr": 0.953125,
+      "atching": 0.97265625
+    },
+    "barely": {
+      "bare": 0.6796875,
+      "ly": 0.9375
+    },
+    "talking": {
+      "t": 0.99609375,
+      "alking": 0.9296875
+    },
+    "Pastas": {
+      "Past": 0.353515625,
+      "as": 0.9296875
+    },
+    "macs": {
+      "mac": 0.96875,
+      "s": 0.984375
+    },
+    "saddest": {
+      "sad": 0.9921875,
+      "dest": 0.98046875
+    },
+    "endless": {
+      "end": 0.984375,
+      "less": 0.89453125
+    },
+    "loved": {
+      "lo": 0.75390625,
+      "ved": 0.984375
+    },
+    "dropped": {
+      "dro": 0.8203125,
+      "pped": 0.99609375
+    },
+    "Bolognese": {
+      "B": 0.8828125,
+      "olog": 0.99609375,
+      "n": 0.8046875,
+      "ese": 0.98046875
+    },
+    "inaccurate": {
+      "in": 0.90234375,
+      "accur": 0.84375,
+      "ate": 0.78515625
+    },
+    "Pesto": {
+      "P": 0.58203125,
+      "esto": 0.953125
+    },
+    "accurate": {
+      "accur": 0.96484375,
+      "ate": 0.81640625
+    },
+    "weaker": {
+      "we": 0.765625,
+      "aker": 0.9296875
+    },
+    "Vodka": {
+      "V": 0.96875,
+      "odka": 0.95703125
+    },
+    "triggers": {
+      "tr": 0.9609375,
+      "iggers": 0.9296875
+    },
+    "bolognese": {
+      "b": 0.87109375,
+      "olog": 0.86328125,
+      "n": 0.6953125,
+      "ese": 0.921875
+    },
+    "toll": {
+      "t": 0.97265625,
+      "oll": 0.98046875
+    },
+    "believe": {
+      "bel": 0.984375,
+      "ieve": 0.98828125
+    },
+    "forgetting": {
+      "forget": 0.6015625,
+      "ting": 1.0
+    },
+    "shortcuts": {
+      "short": 0.91796875,
+      "cuts": 0.875
+    },
+    "singletons": {
+      "single": 0.8515625,
+      "tons": 0.87890625
+    },
+    "observers": {
+      "obs": 0.7265625,
+      "ervers": 0.96875
+    },
+    "sour": {
+      "s": 0.5859375,
+      "our": 0.92578125
+    },
+    "taste": {
+      "t": 0.6328125,
+      "aste": 0.9765625
+    },
+    "survive": {
+      "sur": 0.74609375,
+      "v": 0.9453125,
+      "ive": 0.83984375
+    },
+    "timeframe": {
+      "time": 0.890625,
+      "frame": 0.98828125
+    },
+    "accelerated": {
+      "accel": 0.76953125,
+      "er": 0.8203125,
+      "ated": 0.88671875
+    },
+    "knew": {
+      "k": 0.96484375,
+      "new": 0.953125
+    },
+    "itself": {
+      "it": 0.9140625,
+      "self": 0.87890625
+    },
+    "uneasy": {
+      "une": 0.65625,
+      "asy": 0.953125
+    },
+    "deeply": {
+      "deep": 0.9609375,
+      "ly": 0.8984375
+    },
+    "conundrum": {
+      "con": 0.82421875,
+      "und": 0.91796875,
+      "rum": 0.93359375
+    },
+    "learned": {
+      "learn": 0.64453125,
+      "ed": 0.99609375
+    },
+    "obvious": {
+      "ob": 0.7421875,
+      "vious": 1.0
+    },
+    "explaining": {
+      "expl": 0.9609375,
+      "aining": 0.97265625
+    },
+    "exactly": {
+      "ex": 0.80078125,
+      "actly": 0.9375
+    },
+    "ultimately": {
+      "ult": 0.80078125,
+      "imately": 0.8671875
+    },
+    "faced": {
+      "f": 0.69921875,
+      "aced": 0.78125
+    },
+    "understand": {
+      "under": 0.56640625,
+      "stand": 0.859375
+    },
+    "introductory": {
+      "intro": 0.9609375,
+      "ductory": 0.97265625
+    },
+    "beginning": {
+      "begin": 0.52734375,
+      "ning": 0.85546875
+    },
+    "importantly": {
+      "important": 0.9375,
+      "ly": 0.91796875
+    },
+    "simplified": {
+      "s": 0.8125,
+      "implified": 0.96875
+    },
+    "easier": {
+      "e": 0.88671875,
+      "asier": 0.86328125
+    },
+    "approachable": {
+      "appro": 0.6171875,
+      "achable": 0.8828125
+    },
+    "understandable": {
+      "under": 0.9140625,
+      "stand": 0.625,
+      "able": 0.9921875
+    },
+    "extremely": {
+      "ext": 0.953125,
+      "remely": 0.953125
+    },
+    "Decker": {
+      "De": 0.8203125,
+      "cker": 1.0
+    },
+    "scoping": {
+      "sc": 0.48828125,
+      "oping": 0.98046875
+    },
+    "beforehand": {
+      "before": 0.5703125,
+      "hand": 0.953125
+    },
+    "Dares": {
+      "D": 0.6171875,
+      "ares": 0.9921875
+    },
+    "platforms": {
+      "platform": 0.71484375,
+      "s": 0.9453125
+    },
+    "filed": {
+      "file": 0.9921875,
+      "d": 0.875
+    }
+  }
+}

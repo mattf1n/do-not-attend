@@ -4,6 +4,12 @@ import torch
 from datasets import load_dataset
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from pprint import pprint
+import json
+from collections import Counter
+import seaborn
+# from visualizations import plot_by_word_length_hist_summary
+
+
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 def get_data(dataset_name="monology/pile-uncopyrighted"):
@@ -20,12 +26,10 @@ def get_model(model_name="allenai/Olmo-3-1025-7B"):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     return model, tokenizer
 
-
 def get_data_sample():
     data = get_data()
     sample = next(iter(data['train']))
     return sample['text']
-
 
 def get_first_paragraph():
     data = get_data()
@@ -55,8 +59,6 @@ def get_multi_token_words(text, tokenizer):
             }
         pos += n
     return result
-
-
 
 def get_attentions(input_data, model, tokenizer):
     '''
@@ -90,12 +92,12 @@ def clean_subtokens(text, positions, tokenizer):
     return [clean_token(raw_tokens[p], tokenizer) for p in positions]
 
 
-def analyze_multi_token_attention(attentions, target_positions, token_strings=None):
-    all_attn = torch.stack(attentions)[:, 0]
+def analyze_multi_token_attention_max(attentions, target_positions, token_strings=None):
+    all_attn = torch.stack(attentions)[:, 0] #fixes the shape to be all tensor (as opposed to tuple(tensor))
     num_layers, num_heads, seq_len, _ = all_attn.shape
 
     last_pos = max(target_positions)
-    valid_start = last_pos + 1
+    valid_start = last_pos + 1 # will dictate where we start (rows that dont have word as the last step)
 
     results = {}
 
@@ -131,6 +133,35 @@ def analyze_multi_token_attention(attentions, target_positions, token_strings=No
     return results
 
 
+def get_multi_token_attentions(attentions, target_positions, token_strings=None):
+    """
+    For a list of target positions (i.e., subtokens of a multi-token word),
+    collects the attention columns for each subtoken, for every layer and head.
+
+    Returns:
+        results: dict mapping subtoken string (or index) to:
+            dict mapping layer to dict mapping head to attention column tensor
+    """
+    all_attn = torch.stack(attentions)[:, 0]  # (num_layers, num_heads, seq_len, seq_len)
+    num_layers, num_heads, seq_len, _ = all_attn.shape
+
+    last_pos = max(target_positions)
+    valid_start = last_pos + 1  # only include attentions after the word
+
+    results = {}
+    names = token_strings if token_strings is not None else list(map(str, target_positions))
+    for pos_name, pos in zip(names, target_positions):
+        results[pos_name] = {}
+        for layer in range(num_layers):
+            results[pos_name][layer] = {}
+            for head in range(num_heads):
+                # Get attention column for this subtoken for rows after the word
+                col = all_attn[layer, head, valid_start:, pos]
+                results[pos_name][layer][head] = col
+
+    return results
+
+
 def get_all_attention_results(attentions, multi, text, tokenizer):
     """Compute attention analysis for every multi-token word in the text.
 
@@ -145,12 +176,12 @@ def get_all_attention_results(attentions, multi, text, tokenizer):
     """
     results = {}
     for word, info in multi.items():
-        results[word] = analyze_multi_token_attention(
+        results[word] = get_multi_token_attentions(
             attentions, info["positions"], token_strings=info["tokens"]
         )
     return results
 
-def summarize_results(results,tokenizer):
+def summarize_results_max(results,tokenizer):
     """
     For each multi-token word, maps each subtoken's cleaned string
     to its max attention score.
@@ -168,7 +199,11 @@ def summarize_results(results,tokenizer):
     return summary
 
 
-def test_pipeline():
+
+
+import json
+
+def test_pipeline(output_json_path="test_pipeline_results_all.json"):
     """End-to-end pipeline: load data/model, run inference, analyze attention.
 
     Returns:
@@ -196,15 +231,65 @@ def test_pipeline():
     attentions = get_attentions(text, model, tokenizer)
     multi = get_multi_token_words(text, tokenizer)
 
-    results = get_all_attention_results(attentions, multi, text, tokenizer)
-    max_summary = summarize_results(results, tokenizer)
+    scores = get_all_attention_results(attentions, multi, text, tokenizer)
+    # summary = summarize_results_max(scores, tokenizer)
 
-    return text, multi, results, max_summary
+    # Convert everything to serializable form for JSON
+    json_data = {
+        "text": text,
+        "multi": multi,
+        "scores": scores,
+        # "summary": summary
+    }
+
+    # Safe serialization: convert any numpy types or non-serializable elements
+    def safedump(obj):
+        if hasattr(obj, "tolist"):
+            return obj.tolist()
+        if isinstance(obj, set):
+            return list(obj)
+        return obj
+
+    with open(output_json_path, "w", encoding="utf-8") as f:
+        json.dump(json_data, f, ensure_ascii=False, indent=2, default=safedump)
+    
+    print("output saved")
+
+    return (text, multi, scores)
+
+
+
+
+#GRAPHING
+#TODO remove later
+
+    # plt.savefig("argmax_histogram.png", dpi=150)
+
+
+def find_num_tokens_each_word(json_path="sample_results.json"):
+
+
+    with open("sample_results.json") as f:
+        data = json.load(f)
+
+    sizes = Counter(len(v) for v in data.values())
+    print(sizes)
+
+
+
 
 
 
 
 if __name__ == "__main__":  
-    text, multi, results, max_summary = test_pipeline()
 
-    pprint(max_summary)
+    # pick = input("1: Visualization \nelse: pipeline")
+
+    # if pick == "1": 
+    #     # plot_by_word_length_hist_summary()
+    # else: 
+    test_pipeline()
+    #     text, multi, results, max_summary = test_pipeline()
+    #     pprint(max_summary)
+
+

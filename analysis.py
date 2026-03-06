@@ -16,6 +16,15 @@ def p1_att():
     return att, text
 
 
+def find_num_tokens_each_word(json_path="sample_results.json"):
+
+
+    with open("sample_results.json") as f:
+        data = json.load(f)
+
+    sizes = Counter(len(v) for v in data.values())
+    print(sizes)
+
 
 def get_attentions(input_data, model, tokenizer):
     '''

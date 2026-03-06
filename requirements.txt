@@ -4,3 +4,4 @@ importlib
 zstandard # getting info for IterableDataset
 pprint
 seaborn
+jedi

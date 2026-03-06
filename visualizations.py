@@ -157,7 +157,7 @@ def combine_layer_plots(input_dir, output_path=None, ncols=4, nrows=8):
 
 if __name__ == "__main__":
     # plot_per_layer_box_whisker(json_path="test_pipeline_results_all_paragraph.json")
-    combine_layer_plots("visuals/one_paragraph")
+    # combine_layer_plots("visuals/one_paragraph")
 
 
     

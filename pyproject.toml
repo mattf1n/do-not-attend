@@ -9,6 +9,7 @@ dependencies = [
     "importlib>=1.0.4",
     "ipykernel>=7.2.0",
     "ipython>=9.10.0",
+    "jedi>=0.19.2",
     "plotly>=6.5.2",
     "seaborn>=0.13.2",
     "transformers>=5.2.0",

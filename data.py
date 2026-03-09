@@ -5,8 +5,6 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 #local files
 from config import DEFAULT_DATASET
 from model import get_model
-
-
 #data only
 def get_data(dataset_name=DEFAULT_DATASET):
     data = load_dataset(dataset_name, streaming=True)

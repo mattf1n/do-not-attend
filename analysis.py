@@ -1,5 +1,6 @@
 import torch
 from config import DEVICE
+import copy
 
 # You also need to import get_first_paragraph and get_model (source not shown)
 # Example:
@@ -16,6 +17,61 @@ def p1_att():
     return att, text
 
 
+def get_multi_token_word_attentions(attentions, target_positions):
+    """
+    For given token positions (subtokens of a multi-token word), gathers the attention columns for each position,
+    for all layers and heads, only considering rows after the last target position (where a target token is NOT the last non-masked token in a row).
+
+    Args:
+        attentions (Iterable[Tensor]): List or tuple of attention tensors per layer from the model
+            (each tensor shape: [batch, heads, seq_len, seq_len]).
+        target_positions (List[int]): The sequence indices of the target subtokens within the sequence.
+
+    Returns:
+        dict: Maps each target position to a nested dict of attentions[layer][head] = attention_column_tensor,
+            where each attention_column_tensor contains a single subtoken's attention scores from valid_start:end.
+    """
+    attentions = torch.stack(attentions)[:, 0]  # (num_layers, num_heads, seq_len, seq_len)
+    num_layers, num_heads, seq_len, _ = attentions.shape
+    last_pos = max(target_positions)
+    valid_start = last_pos + 1  # only include attention rows after the last target_position
+
+    target_columns = [] #not using tensor b/c each col will be different length
+    for pos in target_positions:
+        pos_columns = {}
+        for layer in range(num_layers):
+            pos_columns[layer] = {}
+            for head in range(num_heads):
+                col = attentions[layer, head, valid_start:, pos]
+                pos_columns[layer][head] = col
+        target_columns.append(pos_columns)
+
+    return target_columns
+
+
+
+def aggregate_multi_token_word_attentions(attentions, multi_word_map):
+    """
+    Compute attention analysis for every multi-token word in the text.
+    Args:
+        attentions: tuple of attention tensors from model output, one per layer.
+        multi_word_map: output of get_multi_token_words, mapping words to tokens/positions.
+    Returns:
+        dict mapping each multi-token word to its per-subtoken attention stats.
+    """
+    mw_map = multi_word_map.copy()
+    for word, info in mw_map.items():
+        mw_map[word]['position_attentions'] = {}
+        positions = mw_map[word]['positions']
+        for i, position_tuple in positions.items():
+            mw_map[word]['position_attentions'][i] = get_multi_token_word_attentions(attentions, position_tuple)
+
+    return mw_map
+
+
+
+
+
 def find_num_tokens_each_word(json_path="sample_results.json"):
 
 
@@ -25,110 +81,6 @@ def find_num_tokens_each_word(json_path="sample_results.json"):
     sizes = Counter(len(v) for v in data.values())
     print(sizes)
 
-
-def get_attentions(input_data, model, tokenizer):
-    '''
-    from input string, run inference and get the attention scores of the model
-    '''
-    inputs = tokenizer(input_data, return_tensors="pt")
-    # Move inputs to DEVICE
-    inputs = {k: v.to(DEVICE) for k, v in inputs.items()} 
-    with torch.no_grad():
-        outputs = model(**inputs, output_attentions=True)
-    return outputs.attentions
-
-
-
-
-def analyze_multi_token_attention_max(attentions, target_positions, token_strings=None):
-    all_attn = torch.stack(attentions)[:, 0] #fixes the shape to be all tensor (as opposed to tuple(tensor))
-    num_layers, num_heads, seq_len, _ = all_attn.shape
-
-    last_pos = max(target_positions)
-    valid_start = last_pos + 1 # will dictate where we start (rows that dont have word as the last step)
-
-    results = {}
-
-    for i, pos in enumerate(target_positions):
-        global_max = -1.0
-        global_max_loc = None
-        head_maxes = []
-
-        for layer in range(num_layers):
-            for head in range(num_heads):
-                col = all_attn[layer, head, valid_start:, pos]
-
-                if col.numel() == 0:
-                    head_maxes.append(0.0)
-                    continue
-
-                head_max = col.max().item()
-                head_maxes.append(head_max)
-
-                if head_max > global_max:
-                    global_max = head_max
-                    row_idx = valid_start + col.argmax().item()
-                    global_max_loc = (layer, head, row_idx)
-
-        results[i] = {
-            "token": token_strings[i] if token_strings else str(pos),
-            "position": pos,
-            "max_attention": global_max,
-            "max_location (layer, head, row)": global_max_loc,
-            "avg_max_per_head": sum(head_maxes) / len(head_maxes),
-        }
-
-    return results
-
-
-def get_multi_token_attentions(attentions, target_positions, token_strings=None):
-    """
-    For a list of target positions (i.e., subtokens of a multi-token word),
-    collects the attention columns for each subtoken, for every layer and head.
-
-    Returns:
-        results: dict mapping subtoken string (or index) to:
-            dict mapping layer to dict mapping head to attention column tensor
-    """
-    all_attn = torch.stack(attentions)[:, 0]  # (num_layers, num_heads, seq_len, seq_len)
-    num_layers, num_heads, seq_len, _ = all_attn.shape
-
-    last_pos = max(target_positions)
-    valid_start = last_pos + 1  # only include attentions after the word
-
-    results = {}
-    names = token_strings if token_strings is not None else list(map(str, target_positions))
-    for pos_name, pos in zip(names, target_positions):
-        results[pos_name] = {}
-        for layer in range(num_layers):
-            results[pos_name][layer] = {}
-            for head in range(num_heads):
- 
-                col = all_attn[layer, head, valid_start:, pos]
-                results[pos_name][layer][head] = col
-
-    return results
-
-
-
-def get_all_attention_results(attentions, multi, text, tokenizer):
-    """Compute attention analysis for every multi-token word in the text.
-
-    Args:
-        attentions: tuple of attention tensors from model output, one per layer
-        multi: output of get_multi_token_words, mapping words to tokens/positions
-        text: the original input string (used for cleaning subtoken strings)
-        tokenizer: the tokenizer used for encoding
-
-    Returns:
-        dict mapping each multi-token word to its per-subtoken attention stats
-    """
-    results = {}
-    for word, info in multi.items():
-        results[word] = get_multi_token_attentions(
-            attentions, info["positions"], token_strings=info["tokens"]
-        )
-    return results
 
 
 def summarize_results_max(results, tokenizer):

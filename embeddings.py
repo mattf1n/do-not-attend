@@ -24,7 +24,7 @@ past_key_values = outputs.past_key_values
 # This is a tuple of (key, value) per layer
 # Each key tensor has shape: (batch, num_kv_heads, seq_len, head_dim)
 
-To get all key embeddings for a specific token position across all layers:
+#To get all key embeddings for a specific token position across all layers:
 
 token_pos = 5  # position of your token in the sequence
 # Key embeddings for that token at every layer

@@ -21,29 +21,32 @@ def get_multi_token_words(text,tokenizer, max_num_tokens = 100 ):
     input_ids = encodings['input_ids']
 
     num_token_count = Counter(word_ids)
-
     multi_token_word_map = {}
     for word_id, count in num_token_count.items():
-        if (2 <= count <= max_num_tokens):  # only look at multi-token words in specified range
-            start_idx = word_ids.index(word_id) #find first index that uses word
+        # only look at multi-token words in specified range
+        if 2 <= count <= max_num_tokens:
+            start_idx = word_ids.index(word_id)  # find first index that uses word
             end_idx = start_idx + count
-
             word_input_ids = [input_ids[i] for i in range(start_idx, end_idx)]
             word = tokenizer.decode(word_input_ids)
             # word_tokens = tokens[start_idx: end_idx] # find the tokens that make up the multi-token word
-            positions = list(range(start_idx, end_idx))
+            word_positions = list(range(start_idx, end_idx))
+            word_positions = tuple(word_positions) 
 
-            
-            if word in multi_token_word_map: #add new position for word
-                #reason? Because there may be multiplt instances of the same word in the text
-                multi_token_word_map[word]['positions'].append(positions)
+            if word in multi_token_word_map:  # if so add new position for word
+                #reason? Because there may be multiple instances of the same word in the text
+                # even if they are the tokens, the attention given to each of these positiosn could be different
+                #new_pos_index: index of the new position for this word
+                new_pos_index = len(multi_token_word_map[word]['positions']) + 1
+                multi_token_word_map[word]['positions'][new_pos_index] = word_positions
             else: # add word + info for one position
                 multi_token_word_map[word] = {
                     # 'tokens': word_tokens,
-                    'input_ids': word_input_ids,
-                    'positions': [ positions ]
+                    # 'input_ids': word_input_ids,
+                    'positions': {
+                        0: word_positions
+                    }
                 }
-
     return multi_token_word_map
 
 

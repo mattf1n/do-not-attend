@@ -16,10 +16,13 @@ def get_data_sample():
     return sample['text']
 
 # n: how many paragraphs of text in string
-def get_paragraphs(n = 1):
+# start: starting paragraph
+#NOTE this is not perfect as not all \n\n indicate paragraphs, eg. \n\nConcept\n\n
+def get_paragraphs(n = 1, start_idx = 0):
+    end_idx = start_idx + n
     data = get_data()       
     sample = next(iter(data['train']))
-    paragraphs_split = sample['text'].split("\n\n")[:n] #gets the first  to nth paragraph
+    paragraphs_split = sample['text'].split("\n\n")[start_idx:end_idx] #gets the first  to nth paragraph
     paragraphs = "\n\n".join(paragraphs_split)
     return paragraphs
 

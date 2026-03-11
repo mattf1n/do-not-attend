@@ -2,20 +2,6 @@ import torch
 from config import DEVICE
 import copy
 
-# You also need to import get_first_paragraph and get_model (source not shown)
-# Example:
-# from utils import get_first_paragraph, get_model
-
-def p1_att():
-    '''
-    run model on first paragraph of data. 
-    returns: attention scores
-    '''
-    text = get_first_paragraph()
-    model, tokenizer = get_model()
-    att = get_attentions(text, model, tokenizer)
-    return att, text
-
 
 def get_multi_token_word_attentions(attentions, target_positions):
     """
@@ -50,6 +36,7 @@ def get_multi_token_word_attentions(attentions, target_positions):
 
 
 
+
 def aggregate_multi_token_word_attentions(attentions, multi_word_map):
     """
     Compute attention analysis for every multi-token word in the text.
@@ -70,34 +57,89 @@ def aggregate_multi_token_word_attentions(attentions, multi_word_map):
 
 
 
-
-
-def find_num_tokens_each_word(json_path="sample_results.json"):
-
-
-    with open("sample_results.json") as f:
-        data = json.load(f)
-
-    sizes = Counter(len(v) for v in data.values())
-    print(sizes)
-
-
-
-def summarize_results_max(results, tokenizer):
+def get_multi_token_word_attentions_ai(attentions, target_positions):
     """
-    For each multi-token word, maps each subtoken's cleaned string
-    to its max attention score.
+    AI-friendly variant of get_multi_token_word_attentions.
 
-    Args:
-        results: output of test_pipeline's results dict
+    For a single multi-token word (described by its subtoken indices in `target_positions`),
+    returns a nested structure that can be easily serialized to JSON:
+
+      {
+        "token_indices": [11, 12],
+        "attentions": {
+          "layers": [
+            { "heads": [head_0_tensor, head_1_tensor, ...] },
+            ...
+          ]
+        }
+      }
+
+    Where each head tensor has shape [num_subtokens, num_valid_rows]
+    (num_valid_rows = seq_len - (max(target_positions) + 1)).
     """
-    summary = {}
-    for word, subtokens in results.items():
-        word_summary = {}
-        for i, info in subtokens.items():
-            clean = tokenizer.decode(tokenizer.convert_tokens_to_ids([info["token"]])).strip()
-            word_summary[clean] = info["max_attention"]
-        summary[word] = word_summary
-    return summary
+    atts = torch.stack(attentions)[:, 0]  # (num_layers, num_heads, seq_len, seq_len)
+    num_layers, num_heads, seq_len, _ = atts.shape
+
+    last_pos = max(target_positions)
+    valid_start = last_pos + 1
+    token_positions = list(target_positions)
+
+    layers_out = []
+    for layer in range(num_layers):
+        heads_out = []
+        for head in range(num_heads):
+            cols = []
+            for pos in token_positions:
+                col = atts[layer, head, valid_start:, pos]  # (num_valid_rows,)
+                cols.append(col)
+            if len(cols) == 1:
+                head_tensor = cols[0].unsqueeze(0)  # [1, num_valid_rows]
+            else:
+                head_tensor = torch.stack(cols, dim=0)  # [num_subtokens, num_valid_rows]
+            heads_out.append(head_tensor)
+        layers_out.append({"heads": heads_out})
+
+    # return {
+    #     "token_indices": token_positions,
+    #     "attentions": {"layers": layers_out},
+    # }
+    out = {"layers": layers_out}
+    return out
 
 
+def aggregate_multi_token_word_attentions_ai(attentions, multi_word_map):
+    """
+    AI-friendly schema: bundle each occurrence's token span with its attention tensors.
+
+    Output shape:
+      {
+        "<word>": {
+          "occurrences": [
+            {
+              "token_indices": [int, ...],
+              "attentions": <return value of get_multi_token_word_attentions_ai(...) for that occurrence>
+            },
+            ...
+          ]
+        },
+        ...
+      }
+    """
+    out = {}
+    for word, info in multi_word_map.items():
+        occurrences = []
+        # Only accepts the AI-friendly tokenization schema (must have "occurrences" key)
+        if not (isinstance(info, dict) and "occurrences" in info):
+            raise ValueError(f"Expected AI-friendly tokenization schema for word '{word}', but got: {info}")
+
+        for occ in info["occurrences"]:
+            token_positions = occ["token_indices"]
+            occurrences.append(
+                {
+                    "token_indices": list(token_positions),
+                    "attentions": get_multi_token_word_attentions_ai(attentions, token_positions),
+                }
+            )
+        out[word] = {"occurrences": occurrences}
+
+    return out

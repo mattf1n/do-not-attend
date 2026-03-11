@@ -1,16 +1,17 @@
-import re
-import string
-import torch
+def load_json(json_path):
+    """
+    Loads a JSON file and returns its contents as a Python dictionary.
 
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from pprint import pprint
-import json
-from collections import Counter
-import seaborn
-# from visualizations import plot_by_word_length_hist_summary
+    Args:
+        json_path (str): The path to the JSON file.
 
+    Returns:
+        dict: The contents of the JSON file as a dictionary.
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
-
-
-
+    Raises:
+        FileNotFoundError: If the file does not exist.
+        json.JSONDecodeError: If the file is not a valid JSON.
+    """
+    import json
+    with open(json_path, "r", encoding="utf-8") as f:
+        return json.load(f)

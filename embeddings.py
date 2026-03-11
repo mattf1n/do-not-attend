@@ -10,16 +10,20 @@ import seaborn
 
 
 from utils import *
+from data import get_paragraphs
+from model import get_model
+import torch
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-text = get_paragraph()
+text = get_paragraphs()
 
 model, tokenizer = get_model()
 inputs = tokenizer(text, return_tensors="pt").to(DEVICE)
 with torch.no_grad():
-    outputs = model(**inputs, use_cache=True)
+    #use_cachemodel(**inputs, use_cache=True, return_dict = =True: return keys and values
+    outputs = True)
 past_key_values = outputs.past_key_values
 # This is a tuple of (key, value) per layer
 # Each key tensor has shape: (batch, num_kv_heads, seq_len, head_dim)

@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from utils import load_json
 
 
-def get_biword_scores(path: str = "output/multi_word_output_ai.json"):
+def get_biword_scores(path: str = "output/multi_word_output.json"):
     """
     Build aggregated attention scores for *bi-token* words from the AI-friendly JSON.
 
@@ -41,7 +41,9 @@ def get_biword_scores(path: str = "output/multi_word_output_ai.json"):
             "second": [float, ...],  # attention values for subtoken position 1
       }
     """
-    mw_map = load_json(path)
+    in_map = load_json(path)
+
+    mw_map = in_map['main_data']
     result = defaultdict(lambda: defaultdict(lambda: {"first": [], "second": []}))
     for word in mw_map:
         for occurrence in mw_map[word]["occurrences"]:
@@ -59,7 +61,7 @@ def get_biword_scores(path: str = "output/multi_word_output_ai.json"):
 
 
 def plot_per_layer_box_whisker(
-    json_path="output/multi_word_output_ai.json",
+    json_path="output/multi_word_output.json",
     output_dir="visuals/three_paragraphs",
     nrows=8,
     ncols=4
@@ -133,6 +135,6 @@ def combine_layer_plots(input_dir, output_path=None, ncols=4, nrows=8):
 
 
 if __name__ == "__main__":
-plot_per_layer_box_whisker()
-combine_layer_plots("visuals/three_paragraphs")
+    plot_per_layer_box_whisker()
+    combine_layer_plots("visuals/five_paragraphs")
 

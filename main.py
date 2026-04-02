@@ -18,15 +18,20 @@ def test_multitoken(output_json_path="multi_word_output.json"):
     choice = input("1: paragraph \n2: one doc \nelse: one paragraph ")
     print(f"[test_multitoken] User input choice: {choice}")
 
+    num_paragraphs = None  # Track this if applicable
+
     if (choice == "1"):
+        actual_choice = "paragraph"
         print("[test_multitoken] Paragraph selected")
         num_paragraphs = int(input("How many paragraphs: "))
         print(f"[test_multitoken] Number of paragraphs requested: {num_paragraphs}")
         text = get_paragraphs(num_paragraphs)
     elif (choice == "2"):
+        actual_choice = "one doc"
         print("[test_multitoken] One doc selected")
         text = get_data_sample()
     else:
+        actual_choice = "one paragraph"
         print("[test_multitoken] Default selected (one paragraph)")
         text = get_paragraphs() #first paragraph
 
@@ -65,11 +70,13 @@ def test_multitoken(output_json_path="multi_word_output.json"):
     multi_token_word_attention_map = aggregate_multi_token_word_attentions(attentions, multi_token_words_map)
     print("[test_multitoken] Aggregation complete.")
 
-
     out = { 
         'text': text,
-        'main_data': multi_token_word_attention_map
+        'main_data': multi_token_word_attention_map,
+        'choice': actual_choice
     }
+    if actual_choice == "paragraph":
+        out['num_paragraphs'] = num_paragraphs
 
     # Convert everything to serializable form for JSON
     # Safe serialization: convert any numpy types or non-serializable elements

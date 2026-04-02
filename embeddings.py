@@ -15,7 +15,7 @@ from model import get_model
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-text = get_paragraphs()
+text = get_paragraphs(5)
 
 model, tokenizer = get_model()
 inputs = tokenizer(text, return_tensors="pt").to(DEVICE)
@@ -29,7 +29,8 @@ past_key_values = outputs.past_key_values
 
 #To get all key embeddings for a specific token position across all layers:
 
-token_pos = 5  # position of your token in the sequence
+surv_pos = 11  # position of your token in the sequence
+ival_pos = 12
 # Key embeddings for that token at every layer
 
 #num_layers = 32
@@ -38,32 +39,34 @@ token_pos = 5  # position of your token in the sequence
 #d/head_dim: 128
 #shape of .keys: (batch = 1, num_kv_heads = 32, seq_len = 52, head_dim = 128). 
 
-all_keys = [past_key_values.layers[layer].keys[:, :, token_pos, :]
+all_keys_1 = [past_key_values.layers[layer].keys[:, :, surv_pos, :]
           for layer in range(len(past_key_values))]
-# all_keys[i] has shape (1, num_kv_heads, head_dim)
-
-token_ids = inputs["input_ids"][0]
-target_id = tokenizer.encode("the", add_special_tokens=False)[0]
-positions = (token_ids == target_id).nonzero(as_tuple=True)[0]
 
 
-k1 = all_keys[0][0][0]
-k2 = all_keys[0][0][1]
+all_keys_2 = [past_key_values.layers[layer].keys[:, :, ival_pos, :]
+          for layer in range(len(past_key_values))]
+
+# all_keys has shape (num_layers, 1, num_kv_heads, head_dim)
+# 1 b/c 1 seq took
+# len(all_keys) = 32
+
+
+k1 = all_keys_1[0][0][0]
+k2 = all_keys_2[0][0][0]
 
 
 
 ## making plots
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.patches as mpatches
 
-def get_polar_coordinate(a, b):
+def get_polar_coordinates(a, b):
     '''
     a,b: vectors
     b: basic vector
     returns 
         - radius for a
-        - angle btw a and b
+        - angle btw a and b (in radians)
     '''
     na = torch.linalg.norm(a)
     nb = torch.linalg.norm(b)
@@ -73,61 +76,55 @@ def get_polar_coordinate(a, b):
     r = na / nb
     return r, theta
 
-#TODO find better way to set labels for polar coordinate plot (see 'k1k2_polar_test_plot.png')
-#TODO show both basis and other vector?
-def plot_polar_point(theta, r, save_path="plot.png"):
-    theta, r = float(theta), float(r)
-    if r < 0:
-        raise ValueError("r must be non-negative")
+r,theta = get_polar_coordinates(k1,k2)
 
+import numpy as np
+import matplotlib
+import matplotlib.pyplot as plt
+# matplotlib.use('module://matplotlib-backend-kitty')
+
+def plot_polar_point(r, theta, save_path="plot.png"):
+    """
+    Plot a single polar coordinate (r, theta) where theta is in radians.
+    Labels for r and theta remain readable even at small angles.
+    """
+    r, theta = float(r), float(theta)
     theta_deg = np.degrees(theta)
-    x, y = r * np.cos(theta), r * np.sin(theta)
 
-    fig, ax = plt.subplots(figsize=(5, 5))
-    ax.set_aspect("equal")
+    fig, ax = plt.subplots(figsize=(6, 4), subplot_kw=dict(projection="polar"), facecolor="white")
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    ax.set_theta_zero_location("E")
+    ax.set_theta_direction(1)
+    ax.set_thetalim(0, np.pi)
 
-    # Draw vector from origin to (x, y)
-    ax.quiver(
-        0, 0, x, y,
-        angles="xy",
-        scale_units="xy",
-        scale=1,
-        color="navy",
-        width=0.008
+    r_max = max(r * 1.35, 1.0)
+    ax.set_ylim(0, r_max)
+    ax.set_thetagrids([0, 45, 90, 135, 180])
+    ax.set_rlabel_position(90)
+
+    # Vector line + endpoint dot
+    ax.plot([0, theta], [0, r], color="navy", lw=2.5, zorder=3)
+    ax.scatter([theta], [r], color="navy", s=25, zorder=4)
+
+    # Angle arc
+    r_arc = r * 0.25
+    theta_arc = np.linspace(0, theta, 100)
+    ax.plot(theta_arc, np.full_like(theta_arc, r_arc), color="black", lw=1.2)
+
+    #radius and theta labels
+    label_r = r_arc * (2.5 if theta_deg < 20 else 1.6)
+    r_label_offset = r_max * (0.12 if theta_deg > 20 else 0.18)
+    ax.text(
+        theta, r * 0.5, f"({r:.2f}, {theta_deg:.2f}°)",
+        ha="center", va="bottom", fontsize=11, color="navy", fontweight="bold",
+        rotation=theta_deg, rotation_mode="anchor"
     )
 
-    # Draw angle arc
-    arc_diameter = max(r * 0.4, 0.2)  # avoid degenerate arc when r is 0
-    arc = mpatches.Arc( #creates arc
-        (0, 0),
-        arc_diameter,
-        arc_diameter,
-        angle=0,
-        theta1=0,
-        theta2=theta_deg,
-        color="black",
-        lw=1.5
-    )
-    ax.add_patch(arc)
-
-    # Labels
-    ax.text(x / 2 - 0.30, y / 2 + max(r * 0.08, 0.08), f"r = {r:.2f}", fontsize=12, color="navy")
-    ax.text(max(r * 0.25, 0.15), max(r * 0.08, 0.08), f"θ = {theta_deg:.1f}°", fontsize=13)
-
-    # Robust axis limits for all quadrants
-    pad = max(r * 0.15, 0.2)
-    x_min, x_max = min(0, x) - pad, max(0, x) + pad
-    y_min, y_max = min(0, y) - pad, max(0, y) + pad
-    ax.set_xlim(x_min, x_max)
-    ax.set_ylim(y_min, y_max)
-
-    # ax.spines[["right", "top"]].set_visible(False)
-    ax.spines[["left", "bottom"]].set_position("zero")
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    fig.savefig(save_path, dpi=150, bbox_inches="tight")
+    ax.grid(True, linestyle="--", alpha=0.4)
+    plt.tight_layout()
+    plt.savefig(save_path, dpi=150, bbox_inches="tight")
+    plt.show()
     plt.close(fig)
 
-    
-plot_polar_point(theta =np.pi/4, r =2, save_path = 'plot.png')
+# plot_polar_point(r=2.5, theta=np.radians(60), save_path="exmaple.png")
+plot_polar_point(r,theta,'survival_polar.png')

@@ -12,6 +12,7 @@ dependencies = [
     "jedi>=0.19.2",
     "matplotlib-backend-kitty>=2.1.2",
     "plotly>=6.5.2",
+    "prompt-toolkit>=3.0.52",
     "seaborn>=0.13.2",
     "transformers>=5.2.0",
     "zstandard>=0.25.0",

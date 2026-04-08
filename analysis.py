@@ -122,6 +122,50 @@ def get_biword_score_pairs_diff(
     }
 
 
+def get_biword_score_pairs_contrast(
+    path: str = "output/multi_word_output.json",
+) -> dict:
+    """
+    For each bi-token word occurrence, computes the Michelson contrast per row:
+        (tok_1 - tok_0) / (tok_1 + tok_0)
+    This is scale-invariant: a small absolute diff at low values is weighted
+    more heavily than the same diff at high values.
+
+    Edge case: when tok_1 + tok_0 == 0, contrast is defined as 0.
+
+    Returns:
+        { (layer_idx, head_idx): [contrast, ...] }
+        where each contrast is in [-1, 1].
+    """
+    pairs = get_biword_score_pairs(path)
+    result = {}
+    for key, vals in pairs.items():
+        contrasts = []
+        for s0, s1 in vals:
+            denom = s0 + s1
+            contrasts.append((s1 - s0) / denom if denom != 0 else 0.0)
+        result[key] = contrasts
+    return result
+
+
+def compute_layer_contrast_means(
+    path: str = "output/multi_word_output.json",
+) -> dict:
+    """
+    For each layer, computes the mean Michelson contrast across all heads.
+
+    Returns:
+        { layer_idx: float }  — values in [-1, 1]
+    """
+    from collections import defaultdict
+    contrasts = get_biword_score_pairs_contrast(path)
+    layer_vals = defaultdict(list)
+    for (layer, _), vals in contrasts.items():
+        if vals:
+            layer_vals[layer].append(sum(vals) / len(vals))
+    return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
 def compute_head_hypothesis_rates(
     path: str = "output/multi_word_output.json",
 ) -> dict:

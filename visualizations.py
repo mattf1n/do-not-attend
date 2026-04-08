@@ -343,67 +343,180 @@ def plot_layer_hypothesis_bar(
     print(f"Saved {out_path}")
 
 
-def plot_difference_histograms(
+def plot_diff_heatmap(
     diffs: dict,
     output_dir: str = "visuals/experiments/exp2_differences",
-    nrows: int = 8,
-    ncols: int = 4,
 ) -> None:
     """
-    For each layer, plots a grid of histograms — one subplot per head — showing the
-    distribution of (tok_1[row] - tok_0[row]) across all bi-token word occurrences.
-
-    x-axis: [-1, 1]  (positive = last subtoken heavier, negative = first subtoken heavier)
+    Plots a 2D heatmap of mean pairwise attention difference (tok_1 − tok_0)
+    indexed by (layer, head). Each cell shows the average diff for that
+    (layer, head) pair; positive = last subtoken heavier on average,
+    negative = first subtoken heavier.
 
     Args:
         diffs:      output of analysis.get_biword_score_pairs_diff
                     { (layer_idx, head_idx): [diff, ...] }
-        output_dir: directory to save PNGs into
-        nrows:      subplot rows (should equal num_heads // ncols)
-        ncols:      subplot columns
+        output_dir: directory to save the PNG into
     """
     os.makedirs(output_dir, exist_ok=True)
 
     if not diffs:
-        print("[plot_difference_histograms] No data to plot.")
+        print("[plot_diff_heatmap] No data to plot.")
         return
 
     num_layers = max(layer for layer, _ in diffs) + 1
-    num_heads = nrows * ncols
+    num_heads = max(head for _, head in diffs) + 1
 
+    grid = np.zeros((num_layers, num_heads))
+    for (layer, head), values in diffs.items():
+        grid[layer, head] = float(np.mean(values)) if values else 0.0
+
+    abs_max = np.abs(grid).max() or 1.0
+
+    fig_w = max(10, num_heads * 0.55)
+    fig_h = max(6, num_layers * 0.45)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+
+    im = ax.imshow(grid, vmin=-abs_max, vmax=abs_max, aspect="auto", cmap="coolwarm")
+    plt.colorbar(im, ax=ax, label="Mean diff (tok_1 − tok_0)")
+
+    font_size = max(4, min(7, int(80 / max(num_layers, num_heads))))
     for layer in range(num_layers):
-        fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 3, nrows * 2.5), squeeze=False)
-
         for head in range(num_heads):
-            row = head // ncols
-            col = head % ncols
-            ax = axes[row, col]
+            ax.text(
+                head, layer, f"{grid[layer, head]:.3f}",
+                ha="center", va="center", fontsize=font_size,
+                color="black" if abs(grid[layer, head]) < abs_max * 0.7 else "white",
+            )
 
-            values = diffs.get((layer, head), [])
+    ax.set_xlabel("Head", fontsize=10)
+    ax.set_ylabel("Layer", fontsize=10)
+    ax.set_xticks(range(num_heads))
+    ax.set_yticks(range(num_layers))
+    ax.set_xticklabels(range(num_heads), fontsize=7)
+    ax.set_yticklabels(range(num_layers), fontsize=7)
+    ax.set_title("Mean pairwise attention difference (tok_1 − tok_0)", fontsize=12)
 
-            if values:
-                ax.hist(values, bins=40, range=(-1, 1), color="#4C72B0", edgecolor="none", alpha=0.85)
-                mean_val = float(np.mean(values))
-                ax.axvline(mean_val, color="crimson", lw=1.5, linestyle="--", label=f"mean={mean_val:.3f}")
-                ax.legend(fontsize=7, loc="upper left")
-            else:
-                ax.text(0.5, 0.5, "no data", ha="center", va="center", transform=ax.transAxes, fontsize=9)
+    plt.tight_layout()
+    out_path = os.path.join(output_dir, "diff_heatmap.png")
+    plt.savefig(out_path, dpi=150)
+    plt.close()
+    print(f"Saved {out_path}")
 
-            ax.set_xlim(-1, 1)
-            ax.axvline(0, color="black", lw=0.8, linestyle=":")
-            ax.set_xlabel("tok_1 − tok_0", fontsize=8)
-            ax.set_ylabel("count", fontsize=8)
-            ax.set_title(f"Head {head}", fontsize=9)
-            ax.tick_params(labelsize=7)
 
-        fig.suptitle(f"Layer {layer} — Pairwise attention difference (tok_1 − tok_0)", fontsize=13)
-        plt.tight_layout(rect=[0, 0, 1, 0.96])
-        out_path = os.path.join(output_dir, f"layer_{layer}_diff_histogram.png")
-        plt.savefig(out_path, dpi=150)
-        plt.close()
-        print(f"Saved {out_path}")
+def plot_diff_contrast_heatmap(
+    contrasts: dict,
+    output_dir: str = "visuals/experiments/exp_contrast",
+) -> None:
+    """
+    Plots a 2D heatmap of mean Michelson contrast — (tok_1 − tok_0) / (tok_1 + tok_0) —
+    indexed by (layer, head). Each cell shows the average contrast for that
+    (layer, head) pair; positive (red) = last subtoken dominates on average,
+    negative (blue) = first subtoken dominates.
 
-    print(f"Done — {num_layers} layer plots saved to {output_dir}/")
+    Unlike the raw-diff heatmap, this metric is scale-invariant: the same
+    absolute difference carries more weight when the underlying values are small
+    (Michelson contrast formula).
+
+    Args:
+        contrasts:  output of analysis.get_biword_score_pairs_contrast
+                    { (layer_idx, head_idx): [contrast, ...] }
+        output_dir: directory to save the PNG into
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    if not contrasts:
+        print("[plot_diff_contrast_heatmap] No data to plot.")
+        return
+
+    num_layers = max(layer for layer, _ in contrasts) + 1
+    num_heads = max(head for _, head in contrasts) + 1
+
+    grid = np.zeros((num_layers, num_heads))
+    for (layer, head), values in contrasts.items():
+        grid[layer, head] = float(np.mean(values)) if values else 0.0
+
+    abs_max = np.abs(grid).max() or 1.0
+
+    fig_w = max(10, num_heads * 0.55)
+    fig_h = max(6, num_layers * 0.45)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+
+    im = ax.imshow(grid, vmin=-abs_max, vmax=abs_max, aspect="auto", cmap="coolwarm_r")
+    plt.colorbar(im, ax=ax, label="Mean Michelson contrast  (tok_1 − tok_0) / (tok_1 + tok_0)")
+
+    font_size = max(4, min(7, int(80 / max(num_layers, num_heads))))
+    for layer in range(num_layers):
+        for head in range(num_heads):
+            ax.text(
+                head, layer, f"{grid[layer, head]:.3f}",
+                ha="center", va="center", fontsize=font_size,
+                color="black" if abs(grid[layer, head]) < abs_max * 0.7 else "white",
+            )
+
+    ax.set_xlabel("Head", fontsize=10)
+    ax.set_ylabel("Layer", fontsize=10)
+    ax.set_xticks(range(num_heads))
+    ax.set_yticks(range(num_layers))
+    ax.set_xticklabels(range(num_heads), fontsize=7)
+    ax.set_yticklabels(range(num_layers), fontsize=7)
+    ax.set_title("Mean Michelson contrast per head  —  (tok_1 − tok_0) / (tok_1 + tok_0)", fontsize=12)
+
+    plt.tight_layout()
+    out_path = os.path.join(output_dir, "diff_contrast_heatmap.png")
+    plt.savefig(out_path, dpi=150)
+    plt.close()
+    print(f"Saved {out_path}")
+
+
+def plot_layer_contrast_bar(
+    layer_contrasts: dict,
+    output_dir: str = "visuals/experiments/exp_contrast",
+) -> None:
+    """
+    Plots a horizontal bar chart of mean Michelson contrast per layer.
+    Each bar shows the average contrast across all heads in that layer.
+    A vertical reference line at 0 marks the boundary between tok_0 dominance
+    (negative/red) and tok_1 dominance (positive/blue).
+
+    Args:
+        layer_contrasts: output of analysis.compute_layer_contrast_means
+                         { layer_idx: float in [-1, 1] }
+        output_dir:      directory to save the PNG into
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    if not layer_contrasts:
+        print("[plot_layer_contrast_bar] No data to plot.")
+        return
+
+    layers = sorted(layer_contrasts)
+    contrasts = [layer_contrasts[l] for l in layers]
+    colors = ["#4C72B0" if c >= 0 else "#DD8452" for c in contrasts]
+
+    fig, ax = plt.subplots(figsize=(6, max(4, len(layers) * 0.35)))
+    bars = ax.barh(layers, contrasts, color=colors, edgecolor="none", height=0.7)
+    ax.axvline(0, color="black", lw=1, linestyle="--", label="0 (no preference)")
+
+    for bar, c in zip(bars, contrasts):
+        x = c + 0.01 if c >= 0 else c - 0.01
+        ha = "left" if c >= 0 else "right"
+        ax.text(x, bar.get_y() + bar.get_height() / 2, f"{c:.3f}", va="center", ha=ha, fontsize=7)
+
+    ax.set_xlim(-1, 1)
+    ax.set_xlabel("Mean Michelson contrast  (tok_1 − tok_0) / (tok_1 + tok_0)", fontsize=10)
+    ax.set_ylabel("Layer", fontsize=10)
+    ax.set_yticks(layers)
+    ax.set_yticklabels([f"Layer {l}" for l in layers], fontsize=8)
+    ax.invert_yaxis()
+    ax.legend(fontsize=8)
+    ax.set_title("Mean Michelson contrast per layer", fontsize=12)
+
+    plt.tight_layout()
+    out_path = os.path.join(output_dir, "layer_contrast_bar.png")
+    plt.savefig(out_path, dpi=150)
+    plt.close()
+    print(f"Saved {out_path}")
 
 
 if __name__ == "__main__":

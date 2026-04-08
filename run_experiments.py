@@ -37,9 +37,13 @@ from analysis import (
     compute_head_hypothesis_rates,
     compute_layer_hypothesis_rates,
     get_biword_score_pairs_diff,
+    get_biword_score_pairs_contrast,
+    compute_layer_contrast_means,
 )
 from visualizations import (
-    plot_difference_histograms,
+    plot_diff_heatmap,
+    plot_diff_contrast_heatmap,
+    plot_layer_contrast_bar,
     plot_per_layer_box_whisker,
     plot_hypothesis_rate_heatmap,
     plot_layer_hypothesis_bar,
@@ -80,20 +84,14 @@ def run_exp1(
     ncols: int = 4,
 ) -> None:
     """
-    Experiment 1: Pairwise difference histograms (tok_1 - tok_0 per row).
-    Saves one PNG per layer and stitches them into a combined image.
+    Experiment 1: Mean pairwise difference heatmap (tok_1 - tok_0 per head).
+    Saves a single heatmap PNG indexed by (layer, head).
     """
-    print("\n=== Experiment 1: Pairwise Difference Histograms ===")
+    print("\n=== Experiment 1: Mean Pairwise Difference Heatmap ===")
     diffs = get_biword_score_pairs_diff(json_path)
     print(f"Loaded {sum(len(v) for v in diffs.values())} paired differences "
           f"across {len(diffs)} (layer, head) pairs.")
-    plot_difference_histograms(diffs, output_dir=output_dir, nrows=nrows, ncols=ncols)
-    combine_layer_plots(
-        input_dir=output_dir,
-        ncols=1,
-        nrows=len({layer for layer, _ in diffs}),
-        type="diff_histogram",
-    )
+    plot_diff_heatmap(diffs, output_dir=output_dir)
 
 
 def run_exp2(
@@ -205,6 +203,37 @@ def run_exp5(
     plot_layer_hypothesis_bar(rates, output_dir=output_dir, threshold=threshold)
 
 
+def run_exp6(
+    json_path: str,
+    output_dir: str,
+) -> None:
+    """
+    Experiment 6: Michelson contrast heatmap.
+    Plots a 2D (layer x head) heatmap of mean (tok_1 - tok_0) / (tok_1 + tok_0),
+    a scale-invariant measure of last-subtoken dominance.
+    """
+    print("\n=== Experiment 6: Michelson Contrast Heatmap ===")
+    contrasts = get_biword_score_pairs_contrast(json_path)
+    print(f"Loaded {sum(len(v) for v in contrasts.values())} contrast values "
+          f"across {len(contrasts)} (layer, head) pairs.")
+    plot_diff_contrast_heatmap(contrasts, output_dir=output_dir)
+
+
+def run_exp7(
+    json_path: str,
+    output_dir: str,
+) -> None:
+    """
+    Experiment 7: Per-layer Michelson contrast bar chart.
+    Averages the contrast across all heads for each layer and plots a horizontal
+    bar chart, making it easy to see which layers most consistently attend more
+    to the last subtoken on a scale-invariant basis.
+    """
+    print("\n=== Experiment 7: Per-Layer Michelson Contrast Bar Chart ===")
+    layer_contrasts = compute_layer_contrast_means(json_path)
+    plot_layer_contrast_bar(layer_contrasts, output_dir=output_dir)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run attention hypothesis experiments.")
     parser.add_argument(
@@ -217,8 +246,8 @@ def main():
         "--exp",
         nargs="+",
         type=int,
-        choices=[1, 2, 3, 4, 5],
-        default=[1, 2, 3, 4, 5],
+        choices=[1, 2, 3, 4, 5, 6, 7],
+        default=[1, 2, 3, 4, 5, 6, 7],
         help="Which experiments to run (default: all). E.g. --exp 1 4",
     )
     parser.add_argument(
@@ -247,7 +276,7 @@ def main():
     if 1 in args.exp:
         run_exp1(
             args.json_path,
-            output_dir=f"{base_dir}/diff_histograms",
+            output_dir=f"{base_dir}/diff_heatmap",
             nrows=args.nrows,
             ncols=args.ncols,
         )
@@ -271,15 +300,27 @@ def main():
     if 4 in args.exp:
         run_exp4(
             args.json_path,
-            output_dir=f"{base_dir}/head_heatmap",
+            output_dir=f"{base_dir}/rate_head_heatmap",
             threshold=args.threshold,
         )
 
     if 5 in args.exp:
         run_exp5(
             args.json_path,
-            output_dir=f"{base_dir}/layer_bar",
+            output_dir=f"{base_dir}/rate_layer_bar",
             threshold=args.threshold,
+        )
+
+    if 6 in args.exp:
+        run_exp6(
+            args.json_path,
+            output_dir=f"{base_dir}/contrast_heatmap",
+        )
+
+    if 7 in args.exp:
+        run_exp7(
+            args.json_path,
+            output_dir=f"{base_dir}/contrast_layer_bar",
         )
 
     print(f"\nAll selected experiments complete. Outputs in {base_dir}/")

@@ -140,6 +140,23 @@ def compute_head_hypothesis_rates(
     }
 
 
+def compute_layer_hypothesis_rates(
+    path: str = "output/multi_word_output.json",
+) -> dict:
+    """
+    For each layer, computes the mean hypothesis rate across all heads.
+
+    Returns:
+        { layer_idx: float }  — values in [0, 1]
+    """
+    from collections import defaultdict
+    head_rates = compute_head_hypothesis_rates(path)
+    layer_vals = defaultdict(list)
+    for (layer, _), rate in head_rates.items():
+        layer_vals[layer].append(rate)
+    return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
 def summarize_hypothesis_coverage(
     rates: dict,
     threshold: float = 0.5,

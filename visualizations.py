@@ -291,6 +291,58 @@ def plot_hypothesis_rate_heatmap(
     print(f"Saved {out_path}")
 
 
+def plot_layer_hypothesis_bar(
+    layer_rates: dict,
+    output_dir: str = "visuals/experiments/heatmap",
+    threshold: float = 0.5,
+) -> None:
+    """
+    Plots a horizontal bar chart of mean hypothesis rates per layer.
+    Each bar shows the average fraction of heads (across all heads in that layer)
+    where tok_1 > tok_0. A vertical reference line marks the threshold.
+
+    Args:
+        layer_rates: output of analysis.compute_layer_hypothesis_rates
+                     { layer_idx: float in [0, 1] }
+        output_dir:  directory to save the PNG into
+        threshold:   reference line position (default 0.5)
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    if not layer_rates:
+        print("[plot_layer_hypothesis_bar] No data to plot.")
+        return
+
+    layers = sorted(layer_rates)
+    rates = [layer_rates[l] for l in layers]
+    colors = ["#4C72B0" if r >= threshold else "#DD8452" for r in rates]
+
+    fig, ax = plt.subplots(figsize=(6, max(4, len(layers) * 0.35)))
+    bars = ax.barh(layers, rates, color=colors, edgecolor="none", height=0.7)
+    ax.axvline(threshold, color="black", lw=1, linestyle="--", label=f"threshold={threshold}")
+
+    for bar, rate in zip(bars, rates):
+        ax.text(
+            min(rate + 0.01, 0.98), bar.get_y() + bar.get_height() / 2,
+            f"{rate:.3f}", va="center", fontsize=7,
+        )
+
+    ax.set_xlim(0, 1)
+    ax.set_xlabel("Mean hypothesis rate (tok_1 > tok_0)", fontsize=10)
+    ax.set_ylabel("Layer", fontsize=10)
+    ax.set_yticks(layers)
+    ax.set_yticklabels([f"Layer {l}" for l in layers], fontsize=8)
+    ax.invert_yaxis()
+    ax.legend(fontsize=8)
+    ax.set_title("Mean hypothesis rate per layer", fontsize=12)
+
+    plt.tight_layout()
+    out_path = os.path.join(output_dir, "layer_hypothesis_rate_bar.png")
+    plt.savefig(out_path, dpi=150)
+    plt.close()
+    print(f"Saved {out_path}")
+
+
 def plot_difference_histograms(
     diffs: dict,
     output_dir: str = "visuals/experiments/exp2_differences",

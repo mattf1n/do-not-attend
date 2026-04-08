@@ -15,6 +15,7 @@ Experiments:
     3 — Key vector polar coordinates: geometric comparison of subtoken key vectors
         (requires re-running the model to extract past_key_values)
     4 — Hypothesis rate heatmap: 2D grid of (layer x head) hypothesis rates
+    5 — Per-layer hypothesis rate bar chart: mean rate across heads per layer
 
 Output folder structure:
     visuals/<dataset_slug>/
@@ -22,6 +23,7 @@ Output folder structure:
         boxplots/
         polar/
         heatmap/
+        layer_heatmap/
 
     The dataset_slug is derived from the JSON filename, e.g.:
         output/10_paragraphs_2-token_max_word_output.json
@@ -33,12 +35,14 @@ from pathlib import Path
 
 from analysis import (
     compute_head_hypothesis_rates,
+    compute_layer_hypothesis_rates,
     get_biword_score_pairs_diff,
 )
 from visualizations import (
     plot_difference_histograms,
     plot_per_layer_box_whisker,
     plot_hypothesis_rate_heatmap,
+    plot_layer_hypothesis_bar,
     combine_layer_plots,
 )
 from utils import load_json
@@ -182,6 +186,25 @@ def run_exp4(
     plot_hypothesis_rate_heatmap(rates, output_dir=output_dir)
 
 
+def run_exp5(
+    json_path: str,
+    output_dir: str,
+    threshold: float = DEFAULT_THRESHOLD,
+) -> None:
+    """
+    Experiment 5: Per-layer hypothesis rate bar chart.
+    Averages the hypothesis rate across all heads for each layer and plots
+    a horizontal bar chart, making it easy to see which layers most consistently
+    attend more to the last subtoken.
+    """
+    print("\n=== Experiment 5: Per-Layer Hypothesis Rate Bar Chart ===")
+    rates = compute_layer_hypothesis_rates(json_path)
+    passing = sum(1 for v in rates.values() if v >= threshold)
+    print(f"Threshold: {threshold:.0%} | "
+          f"{passing}/{len(rates)} layers pass ({100*passing/len(rates):.1f}%)")
+    plot_layer_hypothesis_bar(rates, output_dir=output_dir, threshold=threshold)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run attention hypothesis experiments.")
     parser.add_argument(
@@ -194,8 +217,8 @@ def main():
         "--exp",
         nargs="+",
         type=int,
-        choices=[1, 2, 3, 4],
-        default=[1, 2, 3, 4],
+        choices=[1, 2, 3, 4, 5],
+        default=[1, 2, 3, 4, 5],
         help="Which experiments to run (default: all). E.g. --exp 1 4",
     )
     parser.add_argument(
@@ -248,7 +271,14 @@ def main():
     if 4 in args.exp:
         run_exp4(
             args.json_path,
-            output_dir=f"{base_dir}/heatmap",
+            output_dir=f"{base_dir}/head_heatmap",
+            threshold=args.threshold,
+        )
+
+    if 5 in args.exp:
+        run_exp5(
+            args.json_path,
+            output_dir=f"{base_dir}/layer_bar",
             threshold=args.threshold,
         )
 

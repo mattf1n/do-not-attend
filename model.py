@@ -26,7 +26,12 @@ def _ensure_model_backend_available(model_name):
 
 def get_model(model_name=DEFAULT_MODEL):
     _ensure_model_backend_available(model_name)
-    model = AutoModelForCausalLM.from_pretrained(model_name, attn_implementation="eager").to(DEVICE)
+    # device_map="auto" streams weights directly to GPU via accelerate,
+    # avoiding the CPU staging copy that would require 2x model size in RAM.
+    model = AutoModelForCausalLM.from_pretrained(
+        model_name,
+        attn_implementation="eager",
+        torch_dtype=torch.float16).to(DEVICE)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     return model, tokenizer
 
@@ -35,8 +40,12 @@ def get_attentions(input_data, model, tokenizer):
     from input string, run inference and get the attention scores of the model
     '''
     inputs = tokenizer(input_data, return_tensors="pt")
-    # Move inputs to DEVICE
-    inputs = {k: v.to(DEVICE) for k, v in inputs.items()} 
+    # Move inputs to the same device as the model's first parameter.
+    # device_map="auto" may place the model on a device other than DEVICE.
+    input_device = next(model.parameters()).device
+    inputs = {k: v.to(input_device) for k, v in inputs.items()}
     with torch.no_grad():
         outputs = model(**inputs, output_attentions=True)
-    return outputs.attentions
+    # Cast to float16 immediately to halve CPU memory when callers move tensors
+    # off the GPU. Relative attention scores don't need float32 precision.
+    return tuple(a.half() for a in outputs.attentions)

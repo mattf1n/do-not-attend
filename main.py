@@ -6,13 +6,8 @@ from tokenization import get_multi_token_words
 from analysis import aggregate_multi_token_word_attentions
 from data import get_paragraphs
 
-def main():
-   
-   test_multitoken()
 
-
-
-def test_multitoken(output_json_path="multi_word_output.json"):
+def test_multitoken():
     print("[test_multitoken] Starting test pipeline...")
 
     choice = input("1: paragraph \n2: one doc \nelse: one paragraph ")
@@ -20,20 +15,24 @@ def test_multitoken(output_json_path="multi_word_output.json"):
 
     num_paragraphs = None  # Track this if applicable
 
-    if (choice == "1"):
+    if choice == "1":
         actual_choice = "paragraph"
         print("[test_multitoken] Paragraph selected")
         num_paragraphs = int(input("How many paragraphs: "))
         print(f"[test_multitoken] Number of paragraphs requested: {num_paragraphs}")
         text = get_paragraphs(num_paragraphs)
-    elif (choice == "2"):
+    elif choice == "2":
         actual_choice = "one doc"
         print("[test_multitoken] One doc selected")
+        from data import get_data_sample
         text = get_data_sample()
+        num_paragraphs = len(text.split('\n\n'))
     else:
         actual_choice = "one paragraph"
         print("[test_multitoken] Default selected (one paragraph)")
-        text = get_paragraphs() #first paragraph
+        num_paragraphs = 1
+        text = get_paragraphs()  # first paragraph
+
 
     print("[test_multitoken] Sample of text input:\n", text[:300] + ("..." if len(text) > 300 else ""))
     
@@ -72,11 +71,10 @@ def test_multitoken(output_json_path="multi_word_output.json"):
 
     out = { 
         'text': text,
+        'choice': actual_choice,
+        'num_paragraphs': num_paragraphs,
         'main_data': multi_token_word_attention_map,
-        'choice': actual_choice
     }
-    if actual_choice == "paragraph":
-        out['num_paragraphs'] = num_paragraphs
 
     # Convert everything to serializable form for JSON
     # Safe serialization: convert any numpy types or non-serializable elements
@@ -87,8 +85,11 @@ def test_multitoken(output_json_path="multi_word_output.json"):
             return list(obj)
         return obj
 
-    print(f"[test_multitoken] Writing results to output file: {output_json_path} ...")
-    with open(output_json_path, "w", encoding="utf-8") as f:
+    # More robust, clear, and typo-proof output filename generation:
+    out_path = f"output/{num_paragraphs}_paragraphs_{num_tokens}-token_max_word_output.json"
+
+    print(f"[test_multitoken] Writing results to output file: {out_path} ...")
+    with open(out_path, "w", encoding="utf-8") as f:
         json.dump(out, f, ensure_ascii=False, indent=2, default=safedump)
     
     print("[test_multitoken] Output saved successfully.")

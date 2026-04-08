@@ -12,8 +12,6 @@ import matplotlib.pyplot as plt
 
 from utils import load_json
 
-
-
 def get_biword_scores(path: str = "output/multi_word_output.json"):
     """
     Build aggregated attention scores for *bi-token* words from the AI-friendly JSON.
@@ -128,7 +126,6 @@ def plot_layer_histogram_max_per_head(
         plt.close()
 
 
-
 def plot_per_layer_box_whisker(
     json_path="output/multi_word_output.json",
     output_dir="visuals/three_paragraphs",
@@ -210,6 +207,10 @@ def combine_layer_plots(
         file_template = "layer_{i}_bitoken_boxplot.png"
     elif type == "histogram":
         file_template = "layer_{i}_max_histogram.png"
+    elif type == "diff_histogram":
+        file_template = "layer_{i}_diff_histogram.png"
+    elif type == "polar_grid":
+        file_template = "layer_{i}_polar_grid.png"
     else:
         raise ValueError(f"Unknown plot type: {type}")
 
@@ -225,6 +226,132 @@ def combine_layer_plots(
         output_path = os.path.join(input_dir, f"all_layers_combined_{type}.png")
     combined.save(output_path, dpi=(150, 150))
     print(f"Saved {output_path} — {combined.size[0]}x{combined.size[1]} pixels")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXPERIMENT FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def plot_hypothesis_rate_heatmap(
+    rates: dict,
+    output_dir: str = "visuals/experiments/heatmap",
+) -> None:
+    """
+    Plots a 2D heatmap of hypothesis rates (last-subtoken dominance) indexed
+    by (layer, head). Each cell shows the fraction of row-level attention
+    comparisons where tok_1 > tok_0 for that (layer, head) pair.
+
+    Args:
+        rates:      output of analysis.compute_head_hypothesis_rates
+                    { (layer_idx, head_idx): float in [0, 1] }
+        output_dir: directory to save the PNG into
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    if not rates:
+        print("[plot_hypothesis_rate_heatmap] No data to plot.")
+        return
+
+    num_layers = max(layer for layer, _ in rates) + 1
+    num_heads = max(head for _, head in rates) + 1
+
+    grid = np.zeros((num_layers, num_heads))
+    for (layer, head), rate in rates.items():
+        grid[layer, head] = rate
+
+    fig_w = max(10, num_heads * 0.55)
+    fig_h = max(6, num_layers * 0.45)
+    fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+
+    im = ax.imshow(grid, vmin=0, vmax=1, aspect="auto", cmap="RdYlGn")
+    plt.colorbar(im, ax=ax, label="Hypothesis rate (tok_1 > tok_0)")
+
+    font_size = max(4, min(7, int(80 / max(num_layers, num_heads))))
+    for layer in range(num_layers):
+        for head in range(num_heads):
+            ax.text(
+                head, layer, f"{grid[layer, head]:.2f}",
+                ha="center", va="center", fontsize=font_size,
+                color="black" if 0.2 < grid[layer, head] < 0.8 else "white",
+            )
+
+    ax.set_xlabel("Head", fontsize=10)
+    ax.set_ylabel("Layer", fontsize=10)
+    ax.set_xticks(range(num_heads))
+    ax.set_yticks(range(num_layers))
+    ax.set_xticklabels(range(num_heads), fontsize=7)
+    ax.set_yticklabels(range(num_layers), fontsize=7)
+    ax.set_title("Hypothesis rate — last subtoken dominance (tok_1 > tok_0)", fontsize=12)
+
+    plt.tight_layout()
+    out_path = os.path.join(output_dir, "hypothesis_rate_heatmap.png")
+    plt.savefig(out_path, dpi=150)
+    plt.close()
+    print(f"Saved {out_path}")
+
+
+def plot_difference_histograms(
+    diffs: dict,
+    output_dir: str = "visuals/experiments/exp2_differences",
+    nrows: int = 8,
+    ncols: int = 4,
+) -> None:
+    """
+    For each layer, plots a grid of histograms — one subplot per head — showing the
+    distribution of (tok_1[row] - tok_0[row]) across all bi-token word occurrences.
+
+    x-axis: [-1, 1]  (positive = last subtoken heavier, negative = first subtoken heavier)
+
+    Args:
+        diffs:      output of analysis.get_biword_score_pairs_diff
+                    { (layer_idx, head_idx): [diff, ...] }
+        output_dir: directory to save PNGs into
+        nrows:      subplot rows (should equal num_heads // ncols)
+        ncols:      subplot columns
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    if not diffs:
+        print("[plot_difference_histograms] No data to plot.")
+        return
+
+    num_layers = max(layer for layer, _ in diffs) + 1
+    num_heads = nrows * ncols
+
+    for layer in range(num_layers):
+        fig, axes = plt.subplots(nrows, ncols, figsize=(ncols * 3, nrows * 2.5), squeeze=False)
+
+        for head in range(num_heads):
+            row = head // ncols
+            col = head % ncols
+            ax = axes[row, col]
+
+            values = diffs.get((layer, head), [])
+
+            if values:
+                ax.hist(values, bins=40, range=(-1, 1), color="#4C72B0", edgecolor="none", alpha=0.85)
+                mean_val = float(np.mean(values))
+                ax.axvline(mean_val, color="crimson", lw=1.5, linestyle="--", label=f"mean={mean_val:.3f}")
+                ax.legend(fontsize=7, loc="upper left")
+            else:
+                ax.text(0.5, 0.5, "no data", ha="center", va="center", transform=ax.transAxes, fontsize=9)
+
+            ax.set_xlim(-1, 1)
+            ax.axvline(0, color="black", lw=0.8, linestyle=":")
+            ax.set_xlabel("tok_1 − tok_0", fontsize=8)
+            ax.set_ylabel("count", fontsize=8)
+            ax.set_title(f"Head {head}", fontsize=9)
+            ax.tick_params(labelsize=7)
+
+        fig.suptitle(f"Layer {layer} — Pairwise attention difference (tok_1 − tok_0)", fontsize=13)
+        plt.tight_layout(rect=[0, 0, 1, 0.96])
+        out_path = os.path.join(output_dir, f"layer_{layer}_diff_histogram.png")
+        plt.savefig(out_path, dpi=150)
+        plt.close()
+        print(f"Saved {out_path}")
+
+    print(f"Done — {num_layers} layer plots saved to {output_dir}/")
 
 
 if __name__ == "__main__":

@@ -1,60 +1,16 @@
 import torch
-from config import DEVICE
-import copy
-
-def get_multi_token_word_attentions(attentions, target_positions):
-    """
-    AI-friendly variant of get_multi_token_word_attentions.
-
-    For a single multi-token word (described by its subtoken indices in `target_positions`),
-    returns a nested structure that can be easily serialized to JSON:
-
-      {
-        "token_indices": [11, 12],
-        "attentions": {
-          "layers": [
-            { "heads": [head_0_tensor, head_1_tensor, ...] },
-            ...
-          ]
-        }
-      }
-
-    Where each head tensor has shape [num_subtokens, num_valid_rows]
-    (num_valid_rows = seq_len - (max(target_positions) + 1)).
-    """
-    atts = torch.stack(attentions)[:, 0]  # (num_layers, num_heads, seq_len, seq_len)
-    num_layers, num_heads, seq_len, _ = atts.shape
-
-    last_pos = max(target_positions)
-    valid_start = last_pos + 1
-    token_positions = list(target_positions)
-
-    layers_out = []
-    for layer in range(num_layers):
-        heads_out = []
-        for head in range(num_heads):
-            cols = []
-            for pos in token_positions:
-                col = atts[layer, head, valid_start:, pos]  # (num_valid_rows,)
-                cols.append(col)
-            if len(cols) == 1:
-                head_tensor = cols[0].unsqueeze(0)  # [1, num_valid_rows]
-            else:
-                head_tensor = torch.stack(cols, dim=0)  # [num_subtokens, num_valid_rows]
-            heads_out.append(head_tensor)
-        layers_out.append({"heads": heads_out})
-
-    # return {
-    #     "token_indices": token_positions,
-    #     "attentions": {"layers": layers_out},
-    # }
-    out = {"layers": layers_out}
-    return out
-
+from collections import defaultdict
+from utils import load_json
 
 def aggregate_multi_token_word_attentions(attentions, multi_word_map):
     """
-    AI-friendly schema: bundle each occurrence's token span with its attention tensors.
+    Memory-efficient drop-in for aggregate_multi_token_word_attentions.
+    Processes one layer at a time to avoid stacking all L layers into a single
+    (L, H, S, S) tensor, which would double peak CPU memory.
+
+    Within each layer, column indexing is still vectorized across heads.
+
+    Input / output schema: same as the old version.
 
     Output shape:
       {
@@ -62,29 +18,146 @@ def aggregate_multi_token_word_attentions(attentions, multi_word_map):
           "occurrences": [
             {
               "token_indices": [int, ...],
-              "attentions": <return value of get_multi_token_word_attentions(...) for that occurrence>
+              "attentions":  {
+                                "layers": [
+                                    { "heads": [head_0_tensor, head_1_tensor, ...] },...
+                                    ]
+                            }
             },
             ...
           ]
         },
         ...
       }
+
+    Where each head tensor has shape [num_subtokens, num_valid_rows]
+    (num_valid_rows = seq_len - (max(target_positions) + 1)).
     """
-    out = {}
+    if not attentions:
+        return {}
+    if attentions[0].device.type != "cpu":
+        attentions = tuple(a.detach().cpu() for a in attentions)
+
+    # Pre-compute per-occurrence positions and valid-row starts once.
+    occ_meta = {}
     for word, info in multi_word_map.items():
-        occurrences = []
-        # Only accepts the AI-friendly tokenization schema (must have "occurrences" key)
         if not (isinstance(info, dict) and "occurrences" in info):
-            raise ValueError(f"Expected AI-friendly tokenization schema for word '{word}', but got: {info}")
-
-        for occ in info["occurrences"]:
-            token_positions = occ["token_indices"]
-            occurrences.append(
-                {
-                    "token_indices": list(token_positions),
-                    "attentions": get_multi_token_word_attentions(attentions, token_positions),
-                }
+            raise ValueError(
+                f"Expected AI-friendly tokenization schema for word '{word}', but got: {info}"
             )
-        out[word] = {"occurrences": occurrences}
+        occ_meta[word] = [
+            {
+                "token_indices": occ["token_indices"],
+                "pos": torch.as_tensor(occ["token_indices"], dtype=torch.long),
+                "start": int(torch.as_tensor(occ["token_indices"]).max()) + 1, # starting row
+            }
+            for occ in info["occurrences"]
+        ]
 
+    # layers_data[word][occ_idx] = list of per-layer head tensors
+    layers_data = {
+        word: [[] for _ in occs] for word, occs in occ_meta.items()
+    }
+
+    for layer_tensor in attentions:
+        # shape: (H, S, S) — squeeze the batch dim, process, then release
+        layer = layer_tensor[0]  # (H, S, S)
+        for word, occs in occ_meta.items():
+            for i, occ in enumerate(occs):
+                pos, start = occ["pos"], occ["start"]
+                # (H, num_valid_rows, K) -> transpose -> (H, K, num_valid_rows)
+                block = layer[:, start:, pos].transpose(1, 2)
+                layers_data[word][i].append({"heads": list(block.unbind(0))})
+        del layer
+
+    out = {}
+    for word, occs in occ_meta.items():
+        occurrences = []
+        for i, occ in enumerate(occs):
+            occurrences.append({
+                "token_indices": occ["token_indices"],
+                "attentions": {"layers": layers_data[word][i]},
+            })
+        out[word] = {"occurrences": occurrences}
     return out
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NEW EXPERIMENT FUNCTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def get_biword_score_pairs(path: str) -> dict:
+    """
+    Returns { (layer_idx, head_idx): [(s0_val, s1_val), ...] } for every
+    bi-token word occurrence in the output JSON.
+    """
+    result = defaultdict(list)
+    mw_map = load_json(path)["main_data"]
+    for word in mw_map:
+        for occurrence in mw_map[word]["occurrences"]:
+            for layer_idx, layer in enumerate(occurrence["attentions"]["layers"]):
+                for head_idx, scores in enumerate(layer["heads"]):
+                    if len(scores) == 2:
+                        result[(layer_idx, head_idx)].extend(zip(scores[0], scores[1]))
+    return dict(result)
+
+
+def get_biword_score_pairs_diff(
+    path: str = "output/multi_word_output.json",
+) -> dict:
+    """
+    For each bi-token word occurrence, computes tok_1[row] - tok_0[row] for
+    every shared row (i.e., every subsequent token position that attends to
+    both subtokens).
+
+    Returns:
+        { (layer_idx, head_idx): [diff, ...] }
+        where each diff is in [-1, 1] (positive = tok_1 heavier, negative = tok_0 heavier).
+    """
+    pairs = get_biword_score_pairs(path)
+    return {
+        key: [s1 - s0 for s0, s1 in vals]
+        for key, vals in pairs.items()
+    }
+
+
+def compute_head_hypothesis_rates(
+    path: str = "output/multi_word_output.json",
+) -> dict:
+    """
+    For each (layer, head), computes the fraction of row-level diffs where the
+    last subtoken had strictly higher attention than the first (diff > 0).
+
+    Returns:
+        { (layer_idx, head_idx): float }  — values in [0, 1]
+    """
+    diffs = get_biword_score_pairs_diff(path)
+    return {
+        #NOTE: v = s1 - s0; therefore v > 0 means s1 > s0
+        head: sum(1 for v in vals if v > 0) / len(vals)
+        for head, vals in diffs.items()
+    }
+
+
+def summarize_hypothesis_coverage(
+    rates: dict,
+    threshold: float = 0.5,
+) -> tuple:
+    """
+    Given per-(layer, head) hypothesis rates, returns which heads pass the threshold
+    and the overall percentage of heads that do.
+
+    Args:
+        rates:     output of compute_head_hypothesis_rates (coming from diff)
+        threshold: minimum rate to count a head as "following" the hypothesis
+
+    Returns:
+        (passing_heads, overall_pct)
+        - passing_heads: list of (layer, head) tuples with rate >= threshold
+        - overall_pct:   float in [0, 100]
+    """
+    passing = [(k, v) for k, v in rates.items() if v >= threshold]
+    passing_heads = [k for k, _ in sorted(passing)]
+    overall_pct = 100.0 * len(passing_heads) / len(rates) if rates else 0.0
+    return passing_heads, overall_pct

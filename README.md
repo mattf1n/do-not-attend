@@ -13,6 +13,10 @@ For each layer, attention head.
 We expect attn on `ple` to be higher.
 Is this true?
 
+running `run_experiments.py`
+
+All experiments: python run_experiments.py <path>
+To run specific ones (here experiments 1 and 4): python run_experiments.py <path> --exp 14
 
 
 # References

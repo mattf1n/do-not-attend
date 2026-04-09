@@ -10,9 +10,12 @@ def get_data(dataset_name=DEFAULT_DATASET):
     data = load_dataset(dataset_name, streaming=True)
     return data
 
-def get_data_sample():
+def get_data_sample(sample_idx=0):
     data = get_data()
-    sample = next(iter(data['train']))
+    iterator = iter(data['train'])
+    for _ in range(sample_idx):
+        next(iterator)
+    sample = next(iterator)
     return sample['text']
 
 # n: how many paragraphs of text in string

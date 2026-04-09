@@ -15,8 +15,30 @@ Is this true?
 
 running `run_experiments.py`
 
-All experiments: python run_experiments.py <path>
-To run specific ones (here experiments 1 and 4): python run_experiments.py <path> --exp 14
+All experiments from a JSON file:
+```
+python run_experiments.py output/my_output.json
+```
+
+All experiments from an npz folder (created by `save_output_npz` in `utils.py`):
+```
+python run_experiments.py --npz output/binary/my_output/
+```
+
+To run specific experiments (e.g. 1 and 4):
+```
+python run_experiments.py output/my_output.json --exp 1 4
+python run_experiments.py --npz output/binary/my_output/ --exp 1 4
+```
+
+**Saving output as npz** (in Python, after running `main.py`):
+```python
+from utils import save_output_npz
+save_output_npz("output/my_output.json", "output/binary/")
+# creates output/binary/my_output/my_output.npz + my_output_meta.json
+```
+
+Note: when `--npz` is used, the data is loaded into memory and written to a temporary JSON file behind the scenes, which is deleted automatically when the run finishes.
 
 
 # References

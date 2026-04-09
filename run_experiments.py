@@ -31,6 +31,8 @@ Output folder structure:
 """
 
 import argparse
+import json
+import tempfile
 from pathlib import Path
 
 from analysis import (
@@ -49,15 +51,50 @@ from visualizations import (
     plot_layer_hypothesis_bar,
     combine_layer_plots,
 )
-from utils import load_json
+from utils import load_json, load_output_npz
 
 
 DEFAULT_JSON_PATH = "output/multi_word_output.json"
 DEFAULT_THRESHOLD = 0.5
 
 
-def get_dataset_slug(json_path: str) -> str:
-    """Derives a clean folder name from the JSON filename."""
+def resolve_json_path(args) -> tuple[str, bool]:
+    """
+    Returns (json_path, is_temp) where json_path is a path to a usable JSON
+    file and is_temp indicates whether it is a temporary file that should be
+    deleted after use.
+
+    If --npz is given, loads the npz folder with load_output_npz, serialises
+    the result to a temporary JSON file, and returns that path.
+    Otherwise returns the normal json_path unchanged.
+    """
+    if args.npz:
+        data = load_output_npz(args.npz)
+
+        for word_data in data["main_data"].values():
+            for occ in word_data["occurrences"]:
+                arr = occ["attentions"]  # shape: (num_layers, num_heads, seq_len, seq_len)
+                occ["attentions"] = {
+                    "layers": [
+                        {"heads": arr[l].tolist()}
+                        for l in range(arr.shape[0])
+                    ]
+                }
+
+        tmp = tempfile.NamedTemporaryFile(
+            mode="w", suffix=".json", delete=False, encoding="utf-8"
+        )
+        json.dump(data, tmp, ensure_ascii=False)
+        tmp.close()
+        return tmp.name, True
+
+    return args.json_path, False
+
+
+def get_dataset_slug(json_path: str, npz_path: str = None) -> str:
+    """Derives a clean folder name from the JSON filename or npz folder."""
+    if npz_path:
+        return Path(npz_path).name
     return Path(json_path).stem.replace("_output", "")
 
 
@@ -243,6 +280,12 @@ def main():
         help=f"Path to the output JSON from main.py (default: {DEFAULT_JSON_PATH})",
     )
     parser.add_argument(
+        "--npz",
+        default=None,
+        help="Path to an npz output folder created by save_output_npz. "
+             "If given, json_path is ignored.",
+    )
+    parser.add_argument(
         "--exp",
         nargs="+",
         type=int,
@@ -265,65 +308,71 @@ def main():
 
     args = parser.parse_args()
 
-    slug = get_dataset_slug(args.json_path)
+    json_path, is_temp = resolve_json_path(args)
+    slug = get_dataset_slug(json_path, npz_path=args.npz)
     base_dir = get_unique_base_dir(slug)
 
-    print(f"JSON path:           {args.json_path}")
+    source_label = args.npz if args.npz else json_path
+    print(f"Input:               {source_label}")
     print(f"Dataset slug:        {slug}")
     print(f"Output base dir:     {base_dir}/")
     print(f"Experiments to run:  {args.exp}")
 
-    if 1 in args.exp:
-        run_exp1(
-            args.json_path,
-            output_dir=f"{base_dir}/diff_heatmap",
-            nrows=args.nrows,
-            ncols=args.ncols,
-        )
+    try:
+        if 1 in args.exp:
+            run_exp1(
+                json_path,
+                output_dir=f"{base_dir}/diff_heatmap",
+                nrows=args.nrows,
+                ncols=args.ncols,
+            )
 
-    if 2 in args.exp:
-        run_exp2(
-            args.json_path,
-            output_dir=f"{base_dir}/boxplots",
-            nrows=args.nrows,
-            ncols=args.ncols,
-        )
+        if 2 in args.exp:
+            run_exp2(
+                json_path,
+                output_dir=f"{base_dir}/boxplots",
+                nrows=args.nrows,
+                ncols=args.ncols,
+            )
 
-    if 3 in args.exp:
-        run_exp3(
-            args.json_path,
-            output_dir=f"{base_dir}/polar",
-            nrows=args.nrows,
-            ncols=args.ncols,
-        )
+        if 3 in args.exp:
+            run_exp3(
+                json_path,
+                output_dir=f"{base_dir}/polar",
+                nrows=args.nrows,
+                ncols=args.ncols,
+            )
 
-    if 4 in args.exp:
-        run_exp4(
-            args.json_path,
-            output_dir=f"{base_dir}/rate_head_heatmap",
-            threshold=args.threshold,
-        )
+        if 4 in args.exp:
+            run_exp4(
+                json_path,
+                output_dir=f"{base_dir}/rate_head_heatmap",
+                threshold=args.threshold,
+            )
 
-    if 5 in args.exp:
-        run_exp5(
-            args.json_path,
-            output_dir=f"{base_dir}/rate_layer_bar",
-            threshold=args.threshold,
-        )
+        if 5 in args.exp:
+            run_exp5(
+                json_path,
+                output_dir=f"{base_dir}/rate_layer_bar",
+                threshold=args.threshold,
+            )
 
-    if 6 in args.exp:
-        run_exp6(
-            args.json_path,
-            output_dir=f"{base_dir}/contrast_heatmap",
-        )
+        if 6 in args.exp:
+            run_exp6(
+                json_path,
+                output_dir=f"{base_dir}/contrast_heatmap",
+            )
 
-    if 7 in args.exp:
-        run_exp7(
-            args.json_path,
-            output_dir=f"{base_dir}/contrast_layer_bar",
-        )
+        if 7 in args.exp:
+            run_exp7(
+                json_path,
+                output_dir=f"{base_dir}/contrast_layer_bar",
+            )
 
-    print(f"\nAll selected experiments complete. Outputs in {base_dir}/")
+        print(f"\nAll selected experiments complete. Outputs in {base_dir}/")
+    finally:
+        if is_temp:
+            Path(json_path).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

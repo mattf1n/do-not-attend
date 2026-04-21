@@ -23,7 +23,7 @@ def save_output_npz(input_json: str, npz_meta_path: str) -> None:
     a folder created at npz_meta_path. Files are named after the input JSON stem.
 
       npz_meta_path/
-          {stem}.npz        : attention arrays as float32, shape (num_layers, num_heads, seq_len, seq_len)
+          {stem}.npz        : attention arrays as float32, shape (num_layers, num_heads, num_subtokens)
           {stem}_meta.json  : text, choice, num_paragraphs, word keys, token_indices
 
     Args:
@@ -68,7 +68,7 @@ def load_output_npz(npz_meta_path: str) -> dict:
     """
     Loads data from a folder created by save_output_npz and reconstructs the
     original output dict. Attentions per occurrence are numpy float32 arrays
-    of shape (num_layers, num_heads, seq_len, seq_len).
+    of shape (num_layers, num_heads, num_subtokens).
 
     Args:
         npz_meta_path (str): Path to the folder containing the .npz and _meta.json files.

@@ -63,7 +63,6 @@ def plot_layer_histogram_max_per_head(
     output_dir: str = "visuals/all/histograms/five_paragraphs",
     nrows: int = 8,
     ncols: int = 4,
-
 ):
     """
     For every layer, plots a histogram across heads, where each head's value is:
@@ -239,8 +238,8 @@ def plot_hypothesis_rate_heatmap(
 ) -> None:
     """
     Plots a 2D heatmap of hypothesis rates (last-subtoken dominance) indexed
-    by (layer, head). Each cell shows the fraction of row-level attention
-    comparisons where tok_1 > tok_0 for that (layer, head) pair.
+    by (layer, head). Each cell shows the fraction of occurrences where
+    mean(tok_1) > mean(tok_0) for that (layer, head) pair.
 
     Args:
         rates:      output of analysis.compute_head_hypothesis_rates
@@ -348,9 +347,9 @@ def plot_diff_heatmap(
     output_dir: str = "visuals/experiments/exp2_differences",
 ) -> None:
     """
-    Plots a 2D heatmap of mean pairwise attention difference (tok_1 − tok_0)
-    indexed by (layer, head). Each cell shows the average diff for that
-    (layer, head) pair; positive = last subtoken heavier on average,
+    Plots a 2D heatmap of mean attention difference per occurrence (tok_1 − tok_0)
+    indexed by (layer, head). Each cell shows the average diff across occurrences
+    for that (layer, head) pair; positive = last subtoken heavier on average,
     negative = first subtoken heavier.
 
     Args:
@@ -409,10 +408,11 @@ def plot_diff_contrast_heatmap(
     output_dir: str = "visuals/experiments/exp_contrast",
 ) -> None:
     """
-    Plots a 2D heatmap of mean Michelson contrast — (tok_1 − tok_0) / (tok_1 + tok_0) —
-    indexed by (layer, head). Each cell shows the average contrast for that
-    (layer, head) pair; positive (red) = last subtoken dominates on average,
-    negative (blue) = first subtoken dominates.
+    Plots a 2D heatmap of mean Michelson contrast per occurrence —
+    (mean(tok_1) − mean(tok_0)) / (mean(tok_1) + mean(tok_0)) —
+    indexed by (layer, head). Each cell shows the average contrast across
+    occurrences for that (layer, head) pair; positive (red) = last subtoken
+    dominates on average, negative (blue) = first subtoken dominates.
 
     Unlike the raw-diff heatmap, this metric is scale-invariant: the same
     absolute difference carries more weight when the underlying values are small

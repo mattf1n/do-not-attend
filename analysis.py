@@ -30,8 +30,8 @@ def aggregate_multi_token_word_attentions(attentions, multi_word_map):
         ...
       }
 
-    Where each head tensor has shape [num_subtokens, num_valid_rows]
-    (num_valid_rows = seq_len - (max(target_positions) + 1)).
+    Where each head tensor has shape [num_subtokens] — the mean attention
+    score across all valid attending rows, one value per subtoken.
     """
     if not attentions:
         return {}
@@ -65,9 +65,10 @@ def aggregate_multi_token_word_attentions(attentions, multi_word_map):
         for word, occs in occ_meta.items():
             for i, occ in enumerate(occs):
                 pos, start = occ["pos"], occ["start"]
-                # (H, num_valid_rows, K) -> transpose -> (H, K, num_valid_rows)
+                # (H, num_valid_rows, K) -> transpose -> (H, K, num_valid_rows) -> mean -> (H, K)
                 block = layer[:, start:, pos].transpose(1, 2)
-                layers_data[word][i].append({"heads": list(block.unbind(0))})
+                block_mean = block.mean(dim=2)
+                layers_data[word][i].append({"heads": list(block_mean.unbind(0))})
         del layer
 
     out = {}
@@ -91,6 +92,9 @@ def get_biword_score_pairs(path: str) -> dict:
     """
     Returns { (layer_idx, head_idx): [(s0_val, s1_val), ...] } for every
     bi-token word occurrence in the output JSON.
+
+    Each (s0, s1) pair is the mean attention score across all attending rows
+    for that occurrence — one pair per occurrence, not one per attending row.
     """
     result = defaultdict(list)
     mw_map = load_json(path)["main_data"]
@@ -99,7 +103,8 @@ def get_biword_score_pairs(path: str) -> dict:
             for layer_idx, layer in enumerate(occurrence["attentions"]["layers"]):
                 for head_idx, scores in enumerate(layer["heads"]):
                     if len(scores) == 2:
-                        result[(layer_idx, head_idx)].extend(zip(scores[0], scores[1]))
+                        # scores[0] and scores[1] are per-occurrence averages, not row vectors
+                        result[(layer_idx, head_idx)].append((scores[0], scores[1]))
     return dict(result)
 
 
@@ -107,13 +112,12 @@ def get_biword_score_pairs_diff(
     path: str = "output/multi_word_output.json",
 ) -> dict:
     """
-    For each bi-token word occurrence, computes tok_1[row] - tok_0[row] for
-    every shared row (i.e., every subsequent token position that attends to
-    both subtokens).
+    For each bi-token word occurrence, computes mean(tok_1) - mean(tok_0),
+    where each score is the mean attention across all attending rows for that occurrence.
 
     Returns:
         { (layer_idx, head_idx): [diff, ...] }
-        where each diff is in [-1, 1] (positive = tok_1 heavier, negative = tok_0 heavier).
+        where each diff is one value per occurrence (positive = tok_1 heavier, negative = tok_0 heavier).
     """
     pairs = get_biword_score_pairs(path)
     return {
@@ -126,8 +130,9 @@ def get_biword_score_pairs_contrast(
     path: str = "output/multi_word_output.json",
 ) -> dict:
     """
-    For each bi-token word occurrence, computes the Michelson contrast per row:
-        (tok_1 - tok_0) / (tok_1 + tok_0)
+    For each bi-token word occurrence, computes the Michelson contrast using
+    per-occurrence averaged subtoken scores:
+        (mean(tok_1) - mean(tok_0)) / (mean(tok_1) + mean(tok_0))
     This is scale-invariant: a small absolute diff at low values is weighted
     more heavily than the same diff at high values.
 
@@ -135,7 +140,7 @@ def get_biword_score_pairs_contrast(
 
     Returns:
         { (layer_idx, head_idx): [contrast, ...] }
-        where each contrast is in [-1, 1].
+        where each contrast is one value per occurrence, in [-1, 1].
     """
     pairs = get_biword_score_pairs(path)
     result = {}
@@ -170,8 +175,8 @@ def compute_head_hypothesis_rates(
     path: str = "output/multi_word_output.json",
 ) -> dict:
     """
-    For each (layer, head), computes the fraction of row-level diffs where the
-    last subtoken had strictly higher attention than the first (diff > 0).
+    For each (layer, head), computes the fraction of occurrences where the
+    last subtoken's mean attention is strictly higher than the first (diff > 0).
 
     Returns:
         { (layer_idx, head_idx): float }  — values in [0, 1]

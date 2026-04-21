@@ -37,4 +37,4 @@ num_multitoken_words: 22
 num_paragraphs:       33
 num_occurrences:      44
 
-bi_words: dict_keys(['Relational', ' programmatic', ' DSLs', ' Sequel', ' Arel', ' CQL', ' DDL', '...),', 'engineer', ' schemata', ' Relational', ' Neumont', ' accrues', ' rework', ' Surprisingly', ' natively', ' Linq', 'extending', ' ;-)', ' JPA', ' CriteriaQuery', ' NoSQL'])
+bi_words: dict_keys(['Relational', ' programmatic', ' DSLs', ' Sequel', ' Arel', ' CQL', ' DDL', '...),', 'engineer', ' schemata', ' Relational', ' Neumont', ' accrues', ' rework', ' Surprisingly', ' natively', ' Linq', 'extending', ' ;-)', ' JPA', ' CriteriaQuery', ' NoSQL'])thjn/ 

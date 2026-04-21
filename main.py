@@ -78,7 +78,9 @@ def test_multitoken():
         'choice': actual_choice,
         'num_paragraphs': num_paragraphs,
         'sample_index': sample_idx,
+        'attention_type': "avg" # for each occurence we take avg value by row for each bitoken in each head
         'main_data': multi_token_word_attention_map,
+        
     }
 
     # Convert everything to serializable form for JSON

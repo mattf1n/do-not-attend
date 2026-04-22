@@ -49,3 +49,8 @@ def get_attentions(input_data, model, tokenizer):
     # Cast to float16 immediately to halve CPU memory when callers move tensors
     # off the GPU. Relative attention scores don't need float32 precision.
     return tuple(a.half() for a in outputs.attentions)
+
+
+def get_tokenizer(model_name=DEFAULT_MODEL):
+    tokenizer = AutoTokenizer.from_pretrained(model_name)
+    return tokenizer

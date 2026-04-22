@@ -84,6 +84,134 @@ def aggregate_multi_token_word_attentions(attentions, multi_word_map):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# STREAMING AGGREGATOR (layer-at-a-time)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class MultiTokenWordAggregator:
+    """
+    Streaming variant of aggregate_multi_token_word_attentions.
+
+    Designed to be driven from a forward hook on each decoder layer's
+    `self_attn` module: feed one layer's attention tensor at a time, the
+    aggregator reduces it to per-occurrence/per-head/per-subtoken means
+    immediately, and the raw [H, S, S] tensor can be freed before the next
+    layer runs.
+
+    Output schema (from `finalize`) matches `aggregate_multi_token_word_attentions`.
+
+    Typical usage:
+        agg = MultiTokenWordAggregator(multi_word_map)
+        # in a forward hook on layer i:
+        #     agg.add_layer(attn_weights)        # attn_weights: (1, H, S, S)
+        result = agg.finalize()
+    """
+
+    def __init__(self, multi_word_map):
+        self.multi_word_map = multi_word_map
+        self.occ_meta = {}
+        for word, info in multi_word_map.items():
+            if not (isinstance(info, dict) and "occurrences" in info):
+                raise ValueError(
+                    f"Expected AI-friendly tokenization schema for word '{word}', "
+                    f"but got: {info}"
+                )
+            self.occ_meta[word] = [
+                {
+                    "token_indices": occ["token_indices"],
+                    "pos": torch.as_tensor(occ["token_indices"], dtype=torch.long),
+                    "start": int(torch.as_tensor(occ["token_indices"]).max()) + 1,
+                }
+                for occ in info["occurrences"]
+            ]
+        self.layers_data = {
+            word: [[] for _ in occs] for word, occs in self.occ_meta.items()
+        }
+
+    def add_layer(self, layer_tensor):
+        """
+        Reduce one layer's attention to per-occurrence (H, K) means and append.
+
+        layer_tensor: torch.Tensor of shape (1, H, S, S) or (H, S, S), any
+        device/dtype. The reduction runs on whatever device the tensor is on,
+        so passing a CUDA tensor keeps the heavy gather on GPU and only the
+        small (H, K) result is moved to CPU.
+        """
+        layer = layer_tensor[0] if layer_tensor.dim() == 4 else layer_tensor
+        device = layer.device
+        for word, occs in self.occ_meta.items():
+            for i, occ in enumerate(occs):
+                pos = occ["pos"].to(device)
+                start = occ["start"]
+                # (H, num_valid_rows, K) -> mean over rows -> (H, K)
+                block = layer[:, start:, pos].transpose(1, 2)
+                block_mean = block.mean(dim=2)
+                block_mean = block_mean.detach().to("cpu", torch.float16)
+                self.layers_data[word][i].append(
+                    {"heads": list(block_mean.unbind(0))}
+                )
+
+    def finalize(self):
+        out = {}
+        for word, occs in self.occ_meta.items():
+            occurrences = [
+                {
+                    "token_indices": occ["token_indices"],
+                    "attentions": {"layers": self.layers_data[word][i]},
+                }
+                for i, occ in enumerate(occs)
+            ]
+            out[word] = {"occurrences": occurrences}
+        return out
+
+
+def get_attentions_streaming(text, model, tokenizer, multi_word_map):
+    """
+    Run the model and aggregate multi-token word attentions in a single pass,
+    one layer at a time, without ever holding the full L-layer attention tuple
+    in memory.
+
+    Memory ceiling: peak ~ one layer's [H, S, S] tensor instead of L of them.
+    For OLMo-3-7B on CPU this raises the practical context-length ceiling
+    from ~7k to ~45k tokens at 150 GB free RAM.
+
+    Returns the same dict schema as `aggregate_multi_token_word_attentions`.
+    """
+    device = next(model.parameters()).device
+    inputs = tokenizer(text, return_tensors="pt")
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+
+    agg = MultiTokenWordAggregator(multi_word_map)
+
+    def make_hook(layer_idx):
+        def hook(module, args, outputs):
+            if not (isinstance(outputs, tuple) and len(outputs) > 1):
+                return outputs
+            attn = outputs[1]
+            if attn is None:
+                return outputs
+            agg.add_layer(attn)
+            # Replace HF's reference to the raw attention tensor so the model
+            # doesn't accumulate all L of them to return as a tuple.
+            return (outputs[0], None) + outputs[2:]
+        return hook
+
+    n = model.config.num_hidden_layers
+    handles = [
+        layer.self_attn.register_forward_hook(make_hook(i))
+        for i, layer in enumerate(model.model.layers[:n])
+    ]
+    try:
+        with torch.no_grad():
+            model(**inputs, output_attentions=True, use_cache=False)
+    finally:
+        for h in handles:
+            h.remove()
+
+    return agg.finalize()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # NEW EXPERIMENT FUNCTIONS
 # ─────────────────────────────────────────────────────────────────────────────
 

@@ -1,0 +1,996 @@
+{
+  "----------------------": {
+    "occurrences": [
+      {
+        "token_indices": [
+          0,
+          1
+        ]
+      },
+      {
+        "token_indices": [
+          164,
+          165
+        ]
+      },
+      {
+        "token_indices": [
+          1267,
+          1268
+        ]
+      }
+    ]
+  },
+  " Forwarded": {
+    "occurrences": [
+      {
+        "token_indices": [
+          2,
+          3
+        ]
+      },
+      {
+        "token_indices": [
+          166,
+          167
+        ]
+      },
+      {
+        "token_indices": [
+          1269,
+          1270
+        ]
+      }
+    ]
+  },
+  "HOU": {
+    "occurrences": [
+      {
+        "token_indices": [
+          8,
+          9
+        ]
+      },
+      {
+        "token_indices": [
+          173,
+          174
+        ]
+      },
+      {
+        "token_indices": [
+          221,
+          222
+        ]
+      },
+      {
+        "token_indices": [
+          1463,
+          1464
+        ]
+      }
+    ]
+  },
+  " 10": {
+    "occurrences": [
+      {
+        "token_indices": [
+          13,
+          14
+        ]
+      },
+      {
+        "token_indices": [
+          40,
+          41
+        ]
+      },
+      {
+        "token_indices": [
+          1449,
+          1450
+        ]
+      },
+      {
+        "token_indices": [
+          1727,
+          1728
+        ]
+      }
+    ]
+  },
+  "2000": {
+    "occurrences": [
+      {
+        "token_indices": [
+          18,
+          19
+        ]
+      },
+      {
+        "token_indices": [
+          45,
+          46
+        ]
+      },
+      {
+        "token_indices": [
+          183,
+          184
+        ]
+      },
+      {
+        "token_indices": [
+          207,
+          208
+        ]
+      }
+    ]
+  },
+  " ---------------------------": {
+    "occurrences": [
+      {
+        "token_indices": [
+          26,
+          27
+        ]
+      },
+      {
+        "token_indices": [
+          1296,
+          1297
+        ]
+      }
+    ]
+  },
+  "aol": {
+    "occurrences": [
+      {
+        "token_indices": [
+          35,
+          36
+        ]
+      }
+    ]
+  },
+  " 06": {
+    "occurrences": [
+      {
+        "token_indices": [
+          47,
+          48
+        ]
+      }
+    ]
+  },
+  "enron": {
+    "occurrences": [
+      {
+        "token_indices": [
+          63,
+          64
+        ]
+      },
+      {
+        "token_indices": [
+          1212,
+          1213
+        ]
+      }
+    ]
+  },
+  " Flanagan": {
+    "occurrences": [
+      {
+        "token_indices": [
+          111,
+          112
+        ]
+      }
+    ]
+  },
+  " DocReq": {
+    "occurrences": [
+      {
+        "token_indices": [
+          115,
+          116
+        ]
+      }
+    ]
+  },
+  " Tana": {
+    "occurrences": [
+      {
+        "token_indices": [
+          169,
+          170
+        ]
+      },
+      {
+        "token_indices": [
+          217,
+          218
+        ]
+      }
+    ]
+  },
+  " 03": {
+    "occurrences": [
+      {
+        "token_indices": [
+          178,
+          179
+        ]
+      },
+      {
+        "token_indices": [
+          209,
+          210
+        ]
+      }
+    ]
+  },
+  " 04": {
+    "occurrences": [
+      {
+        "token_indices": [
+          185,
+          186
+        ]
+      }
+    ]
+  },
+  "---------------------------": {
+    "occurrences": [
+      {
+        "token_indices": [
+          192,
+          193
+        ]
+      }
+    ]
+  },
+  " Radous": {
+    "occurrences": [
+      {
+        "token_indices": [
+          197,
+          198
+        ]
+      }
+    ]
+  },
+  "ENRON": {
+    "occurrences": [
+      {
+        "token_indices": [
+          200,
+          201
+        ]
+      },
+      {
+        "token_indices": [
+          1307,
+          1308
+        ]
+      },
+      {
+        "token_indices": [
+          1350,
+          1351
+        ]
+      },
+      {
+        "token_indices": [
+          1468,
+          1469
+        ]
+      }
+    ]
+  },
+  " Commodities": {
+    "occurrences": [
+      {
+        "token_indices": [
+          234,
+          235
+        ]
+      }
+    ]
+  },
+  " Exchanges": {
+    "occurrences": [
+      {
+        "token_indices": [
+          236,
+          237
+        ]
+      }
+    ]
+  },
+  "Tana": {
+    "occurrences": [
+      {
+        "token_indices": [
+          240,
+          241
+        ]
+      }
+    ]
+  },
+  "regarding": {
+    "occurrences": [
+      {
+        "token_indices": [
+          277,
+          278
+        ]
+      }
+    ]
+  },
+  " safeguarding": {
+    "occurrences": [
+      {
+        "token_indices": [
+          279,
+          280
+        ]
+      }
+    ]
+  },
+  " 1": {
+    "occurrences": [
+      {
+        "token_indices": [
+          288,
+          289
+        ]
+      },
+      {
+        "token_indices": [
+          453,
+          454
+        ]
+      },
+      {
+        "token_indices": [
+          475,
+          476
+        ]
+      },
+      {
+        "token_indices": [
+          595,
+          596
+        ]
+      }
+    ]
+  },
+  " 2": {
+    "occurrences": [
+      {
+        "token_indices": [
+          309,
+          310
+        ]
+      },
+      {
+        "token_indices": [
+          1802,
+          1803
+        ]
+      }
+    ]
+  },
+  " IPE": {
+    "occurrences": [
+      {
+        "token_indices": [
+          319,
+          320
+        ]
+      }
+    ]
+  },
+  " 01": {
+    "occurrences": [
+      {
+        "token_indices": [
+          352,
+          353
+        ]
+      }
+    ]
+  },
+  " 31": {
+    "occurrences": [
+      {
+        "token_indices": [
+          358,
+          359
+        ]
+      },
+      {
+        "token_indices": [
+          423,
+          424
+        ]
+      }
+    ]
+  },
+  " Firms": {
+    "occurrences": [
+      {
+        "token_indices": [
+          377,
+          378
+        ]
+      }
+    ]
+  },
+  " Deposits": {
+    "occurrences": [
+      {
+        "token_indices": [
+          409,
+          410
+        ]
+      }
+    ]
+  },
+  "===========================================================": {
+    "occurrences": [
+      {
+        "token_indices": [
+          430,
+          431
+        ]
+      }
+    ]
+  },
+  " COMEX": {
+    "occurrences": [
+      {
+        "token_indices": [
+          514,
+          515
+        ]
+      },
+      {
+        "token_indices": [
+          542,
+          543
+        ]
+      }
+    ]
+  },
+  " Clearing": {
+    "occurrences": [
+      {
+        "token_indices": [
+          610,
+          611
+        ]
+      },
+      {
+        "token_indices": [
+          634,
+          635
+        ]
+      },
+      {
+        "token_indices": [
+          671,
+          672
+        ]
+      },
+      {
+        "token_indices": [
+          973,
+          974
+        ]
+      },
+      {
+        "token_indices": [
+          1055,
+          1056
+        ]
+      },
+      {
+        "token_indices": [
+          1092,
+          1093
+        ]
+      }
+    ]
+  },
+  " 95": {
+    "occurrences": [
+      {
+        "token_indices": [
+          621,
+          622
+        ]
+      },
+      {
+        "token_indices": [
+          1042,
+          1043
+        ]
+      },
+      {
+        "token_indices": [
+          1153,
+          1154
+        ]
+      }
+    ]
+  },
+  " 25": {
+    "occurrences": [
+      {
+        "token_indices": [
+          666,
+          667
+        ]
+      },
+      {
+        "token_indices": [
+          685,
+          686
+        ]
+      },
+      {
+        "token_indices": [
+          1087,
+          1088
+        ]
+      },
+      {
+        "token_indices": [
+          1109,
+          1110
+        ]
+      }
+    ]
+  },
+  " henceforth": {
+    "occurrences": [
+      {
+        "token_indices": [
+          776,
+          777
+        ]
+      }
+    ]
+  },
+  " 3": {
+    "occurrences": [
+      {
+        "token_indices": [
+          811,
+          812
+        ]
+      },
+      {
+        "token_indices": [
+          1746,
+          1747
+        ]
+      }
+    ]
+  },
+  " Purta": {
+    "occurrences": [
+      {
+        "token_indices": [
+          837,
+          838
+        ]
+      }
+    ]
+  },
+  " 299": {
+    "occurrences": [
+      {
+        "token_indices": [
+          853,
+          854
+        ]
+      },
+      {
+        "token_indices": [
+          880,
+          881
+        ]
+      },
+      {
+        "token_indices": [
+          910,
+          911
+        ]
+      }
+    ]
+  },
+  "2928": {
+    "occurrences": [
+      {
+        "token_indices": [
+          883,
+          884
+        ]
+      }
+    ]
+  },
+  "2855": {
+    "occurrences": [
+      {
+        "token_indices": [
+          913,
+          914
+        ]
+      }
+    ]
+  },
+  " 9": {
+    "occurrences": [
+      {
+        "token_indices": [
+          926,
+          927
+        ]
+      },
+      {
+        "token_indices": [
+          952,
+          953
+        ]
+      }
+    ]
+  },
+  " deletions": {
+    "occurrences": [
+      {
+        "token_indices": [
+          946,
+          947
+        ]
+      }
+    ]
+  },
+  " depositing": {
+    "occurrences": [
+      {
+        "token_indices": [
+          982,
+          983
+        ]
+      }
+    ]
+  },
+  " complies": {
+    "occurrences": [
+      {
+        "token_indices": [
+          998,
+          999
+        ]
+      }
+    ]
+  },
+  " Harriman": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1142,
+          1143
+        ]
+      }
+    ]
+  },
+  "cfm": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1200,
+          1201
+        ]
+      }
+    ]
+  },
+  "useremail": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1203,
+          1204
+        ]
+      }
+    ]
+  },
+  "tana": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1206,
+          1207
+        ]
+      }
+    ]
+  },
+  "jones": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1209,
+          1210
+        ]
+      }
+    ]
+  },
+  "refdoc": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1217,
+          1218
+        ]
+      }
+    ]
+  },
+  "Enron": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1280,
+          1281
+        ]
+      },
+      {
+        "token_indices": [
+          1338,
+          1339
+        ]
+      },
+      {
+        "token_indices": [
+          1341,
+          1342
+        ]
+      }
+    ]
+  },
+  " 02": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1283,
+          1284
+        ]
+      },
+      {
+        "token_indices": [
+          1315,
+          1316
+        ]
+      }
+    ]
+  },
+  "2001": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1288,
+          1289
+        ]
+      },
+      {
+        "token_indices": [
+          1320,
+          1321
+        ]
+      }
+    ]
+  },
+  " 11": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1322,
+          1323
+        ]
+      },
+      {
+        "token_indices": [
+          1812,
+          1813
+        ]
+      }
+    ]
+  },
+  " Sonya": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1346,
+          1347
+        ]
+      }
+    ]
+  },
+  "Julie": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1398,
+          1399
+        ]
+      }
+    ]
+  },
+  " 28": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1443,
+          1444
+        ]
+      }
+    ]
+  },
+  "0012": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1517,
+          1518
+        ]
+      },
+      {
+        "token_indices": [
+          1524,
+          1525
+        ]
+      },
+      {
+        "token_indices": [
+          1538,
+          1539
+        ]
+      },
+      {
+        "token_indices": [
+          1552,
+          1553
+        ]
+      }
+    ]
+  },
+  "0413": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1531,
+          1532
+        ]
+      },
+      {
+        "token_indices": [
+          1545,
+          1546
+        ]
+      }
+    ]
+  },
+  "Jaime": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1683,
+          1684
+        ]
+      }
+    ]
+  },
+  "Saludos": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1691,
+          1692
+        ]
+      }
+    ]
+  },
+  " Irwin": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1712,
+          1713
+        ]
+      }
+    ]
+  },
+  " 4": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1753,
+          1754
+        ]
+      }
+    ]
+  },
+  "departing": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1776,
+          1777
+        ]
+      }
+    ]
+  },
+  " 12": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1780,
+          1781
+        ]
+      }
+    ]
+  },
+  " Enron": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1798,
+          1799
+        ]
+      }
+    ]
+  },
+  " Grundfest": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1827,
+          1828
+        ]
+      }
+    ]
+  },
+  "Vanessa": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1862,
+          1863
+        ]
+      }
+    ]
+  },
+  " Hotline": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1897,
+          1898
+        ]
+      }
+    ]
+  },
+  "4727": {
+    "occurrences": [
+      {
+        "token_indices": [
+          1906,
+          1907
+        ]
+      }
+    ]
+  }
+}

@@ -12,23 +12,24 @@ from config import DEFAULT_DATASET, MAX_TOKENS
 from model import get_tokenizer
 
 
+
 PILE_COMPONENTS = [
     "Pile-CC",
     "PubMed Central",
-    "ArXiv",
-    "GitHub",
+    # "ArXiv",
+    # "GitHub",
     "FreeLaw",
-    "Stack Exchange",
+    # "Stack Exchange",
     "USPTO Backgrounds",
-    "DM Mathematics",
+    # "DM Mathematics",
     "Wikipedia (en)",
     "HackerNews",
     "NIH ExPorter",
     "PubMed Abstracts",
     "Enron Emails",
-    "EuroParl",
+    # "EuroParl",
     "PhilPapers",
-    "Ubuntu IRC",
+    # "Ubuntu IRC",
     "Gutenberg (PG-19)",
 ]
 

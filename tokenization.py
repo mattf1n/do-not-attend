@@ -48,20 +48,6 @@ def get_multi_token_words(text, tokenizer, max_num_subtokens=2):
 
     return out
 
-
-
-def export_multi_token_words_map(multi_word_map, output_path):
-    """
-    Export the multi_token words map to a json file.
-
-    Args:
-        multi_word_map: The dictionary produced by get_multi_token_words.
-        output_path: Path (str) to the json file for export.
-    """
-    import json
-    with open(output_path, "w", encoding="utf-8") as f:
-        json.dump(multi_word_map, f, ensure_ascii=False, indent=2)
-
 def summarize_multi_token_words(multi_token_words_map):
     """
     Print and return the number of unique multi-token words and their total occurrences.
@@ -78,5 +64,15 @@ def summarize_multi_token_words(multi_token_words_map):
     print(f"Total occurrences:        {total_occurrences}")
     return num_words, total_occurrences
 
+def export_multi_token_words_map(multi_word_map, output_path):
+    """
+    Export the multi_token words map to a json file.
 
+    Args:
+        multi_word_map: The dictionary produced by get_multi_token_words.
+        output_path: Path (str) to the json file for export.
+    """
+    import json
+    with open(output_path, "w", encoding="utf-8") as f:
+        json.dump(multi_word_map, f, ensure_ascii=False, indent=2)
 

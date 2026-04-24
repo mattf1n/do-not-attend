@@ -65,6 +65,86 @@ def aggregate_multi_token_word_attentions(attentions, multi_word_map):
         for word, occs in occ_meta.items():
             for i, occ in enumerate(occs):
                 pos, start = occ["pos"], occ["start"]
+                # (H, num_valid_rows, K) -> mean over rows -> (H, K)
+                block_mean = layer[:, start:, pos].mean(dim=1)
+                layers_data[word][i].append(block_mean)
+        del layer
+
+    out = {}
+    for word, occs in occ_meta.items():
+        occurrences = []
+        for i, occ in enumerate(occs):
+            layer_dicts = [{"heads": list(t.unbind(0))} for t in layers_data[word][i]]
+            occurrences.append({
+                "token_indices": occ["token_indices"],
+                "attentions": {"layers": layer_dicts},
+            })
+        out[word] = {"occurrences": occurrences}
+    return out
+
+def aggregate_multi_token_word_attentions_old(attentions, multi_word_map):
+    """
+    Memory-efficient drop-in for aggregate_multi_token_word_attentions.
+    Processes one layer at a time to avoid stacking all L layers into a single
+    (L, H, S, S) tensor, which would double peak CPU memory.
+
+    Within each layer, column indexing is still vectorized across heads.
+
+    Input / output schema: same as the old version.
+
+    Output shape:
+      {
+        "<word>": {
+          "occurrences": [
+            {
+              "token_indices": [int, ...],
+              "attentions":  {
+                                "layers": [
+                                    { "heads": [head_0_tensor, head_1_tensor, ...] },...
+                                    ]
+                            }
+            },
+            ...
+          ]
+        },
+        ...
+      }
+
+    Where each head tensor has shape [num_subtokens] — the mean attention
+    score across all valid attending rows, one value per subtoken.
+    """
+    if not attentions:
+        return {}
+    if attentions[0].device.type != "cpu":
+        attentions = tuple(a.detach().cpu() for a in attentions)
+
+    # Pre-compute per-occurrence positions and valid-row starts once.
+    occ_meta = {}
+    for word, info in multi_word_map.items():
+        if not (isinstance(info, dict) and "occurrences" in info):
+            raise ValueError(
+                f"Expected AI-friendly tokenization schema for word '{word}', but got: {info}"
+            )
+        occ_meta[word] = [
+            {
+                "token_indices": occ["token_indices"],
+                "pos": torch.as_tensor(occ["token_indices"], dtype=torch.long),
+                "start": int(torch.as_tensor(occ["token_indices"]).max()) + 1, # starting row
+            }
+            for occ in info["occurrences"]
+        ]
+
+    # layers_data[word][occ_idx] = list of per-layer head tensors
+    layers_data = {
+        word: [[] for _ in occs] for word, occs in occ_meta.items()
+    }
+
+    for layer_tensor in attentions:
+        # shape: (H, S, S) — squeeze the batch dim, process, then release
+        layer = layer_tensor[0]  # (H, S, S)
+        for word, occs in occ_meta.items():
+            for i, occ in enumerate(occs):
+                pos, start = occ["pos"], occ["start"]
                 # (H, num_valid_rows, K) -> transpose -> (H, K, num_valid_rows) -> mean -> (H, K)
                 block = layer[:, start:, pos].transpose(1, 2)
                 block_mean = block.mean(dim=2)

@@ -14,7 +14,7 @@ import torch
 from model import get_model, get_attentions
 from tokenization import get_multi_token_words, summarize_multi_token_words
 from analysis import aggregate_multi_token_word_attentions
-from data import get_paragraphs, get_data_samples, PILE_COMPONENTS
+from data import get_data_samples, PILE_COMPONENTS
 
 
 def _get_max_tokens_input(default=20000):
@@ -66,6 +66,7 @@ def _run_pipeline(text, component, num_tokens, max_num_subtokens, model, tokeniz
         'text': text,
         'component': component,
         'num_tokens': num_tokens,
+        'max_num_subtokens': max_num_subtokens,
         'multi_token_words_list': list(multi_token_words_map.keys()),
         'num_unique_mt_words': num_unique_mt_words,         # mt = multi-token
         'num_mt_word_occurrences': num_mt_word_occurrences, # mt = multi-token
@@ -149,78 +150,6 @@ def _write_stats_doc(out_dir, stats_rows, max_tokens, max_num_subtokens, mode, t
     with open(stats_path, "w", encoding="utf-8") as f:
         f.write("\n".join(lines))
     print(f"[main] Stats doc written to {stats_path}")
-
-
-def single_run():
-    print("[main] --- Single Run ---")
-    run_start = time.time()
-    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
-
-    sub_choice = input("1: paragraphs\n2: one doc\nelse: one paragraph\n> ").strip()
-
-    if sub_choice == "1":
-        num_paragraphs = int(input("How many paragraphs: "))
-        print(f"[main] Fetching {num_paragraphs} paragraph(s)...")
-        text = get_paragraphs(num_paragraphs)
-    elif sub_choice == "2":
-        from data import get_data_sample
-        sample_idx_input = input("Which sample index? (default = 0): ").strip()
-        sample_idx = int(sample_idx_input) if sample_idx_input.isdigit() else 0
-        print(f"[main] Fetching sample index {sample_idx}...")
-        text = get_data_sample(sample_idx)
-    else:
-        print("[main] Fetching first paragraph...")
-        text = get_paragraphs()
-
-    component_input = input("Pile component (leave blank for 'all'): ").strip()
-    component = component_input if component_input else "all"
-
-    num_tokens = _get_max_tokens_input()
-    max_num_subtokens = _get_max_num_subtokens_input()
-
-    print("[main] Sample of text input:\n", text[:300] + ("..." if len(text) > 300 else ""))
-
-    print("[main] Loading model and tokenizer...")
-    model, tokenizer = get_model()
-    print("[main] Model and tokenizer loaded.")
-
-    out = _run_pipeline(text, component, num_tokens, max_num_subtokens, model, tokenizer)
-
-    del model
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        print("[main] Freed CUDA memory.")
-
-    os.makedirs("output", exist_ok=True)
-    component_slug = _component_to_filename(component)
-    out_path = f"output/{component_slug}_{num_tokens}tokens.json"
-
-    print(f"[main] Writing results to {out_path} ...")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(out, f, ensure_ascii=False, indent=2, default=_safedump)
-    print("[main] Output saved successfully.")
-
-    total_duration = time.time() - run_start
-    stats_row = {
-        'component': component,
-        'num_samples': 1,
-        'actual_tokens': num_tokens,
-        'num_unique_mt_words': out['num_unique_mt_words'],
-        'num_mt_word_occurrences': out['num_mt_word_occurrences'],
-        'duration_s': total_duration,
-    }
-    _write_stats_doc(
-        out_dir="output",
-        stats_rows=[stats_row],
-        max_tokens=num_tokens,
-        max_num_subtokens=max_num_subtokens,
-        mode="single run",
-        timestamp=timestamp,
-        components_used=[component],
-        scope_was_all=(component == "all"),
-        skipped=[],
-        total_duration_s=total_duration,
-    )
 
 
 def multi_component_run():
@@ -323,16 +252,109 @@ def multi_component_run():
         total_duration_s=total_duration,
     )
 
-    print("\n[main] All components complete.")
+    print(f"\n[main] All components complete. Total time: {total_duration:.2f}s")
+
+
+def batch_run(num_tokens, max_num_subtokens, components):
+    """Non-interactive version of multi_component_run for SBATCH jobs."""
+    import argparse
+    print("[main] --- Batch Run ---")
+    total_start = time.time()
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+
+    scope_was_all = components == PILE_COMPONENTS
+    mode = (
+        "multi-component (all)" if scope_was_all
+        else f"multi-component (subset: {components})"
+    )
+    print(f"[main] num_tokens={num_tokens}, max_num_subtokens={max_num_subtokens}")
+    print(f"[main] components: {components}")
+
+    out_dir = f"output/{num_tokens}_tokens"
+    os.makedirs(out_dir, exist_ok=True)
+
+    print("[main] Loading model and tokenizer...")
+    model, tokenizer = get_model()
+    print("[main] Model and tokenizer loaded.")
+
+    stats_rows = []
+    skipped = []
+
+    for component in components:
+        comp_start = time.time()
+        print(f"\n[main] ===== Processing component: '{component}' =====")
+        text, metadata = get_data_samples(
+            component=component,
+            max_tokens=num_tokens,
+            type="string",
+            return_metadata=True,
+        )
+        if metadata["num_samples"] == 0:
+            print(f"[main] Skipping '{component}': 0 samples collected.")
+            skipped.append(component)
+            continue
+        print(f"[main] Data fetched: {metadata}")
+
+        out = _run_pipeline(text, component, num_tokens, max_num_subtokens, model, tokenizer)
+
+        component_slug = _component_to_filename(component)
+        out_path = f"{out_dir}/{component_slug}_{num_tokens}tokens.json"
+        with open(out_path, "w", encoding="utf-8") as f:
+            json.dump(out, f, ensure_ascii=False, indent=2, default=_safedump)
+        print(f"[main] Saved: {out_path}")
+
+        stats_rows.append({
+            'component': component,
+            'num_samples': metadata['num_samples'],
+            'actual_tokens': metadata['num_tokens'],
+            'num_unique_mt_words': out['num_unique_mt_words'],
+            'num_mt_word_occurrences': out['num_mt_word_occurrences'],
+            'duration_s': time.time() - comp_start,
+        })
+
+    del model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    total_duration = time.time() - total_start
+    _write_stats_doc(
+        out_dir=out_dir,
+        stats_rows=stats_rows,
+        max_tokens=num_tokens,
+        max_num_subtokens=max_num_subtokens,
+        mode=mode,
+        timestamp=timestamp,
+        components_used=components,
+        scope_was_all=scope_was_all,
+        skipped=skipped,
+        total_duration_s=total_duration,
+    )
+    print(f"\n[main] All components complete. Total time: {total_duration:.2f}s")
 
 
 def main():
-    print("[main] Starting...")
-    mode = input("1: single run\n2: multi-component run\n> ").strip()
-    if mode == "2":
-        multi_component_run()
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--batch", action="store_true", help="Non-interactive batch mode.")
+    parser.add_argument("--tokens", type=int, default=20000)
+    parser.add_argument("--max-subtokens", type=int, default=2)
+    parser.add_argument(
+        "--components", type=str, default=None,
+        help="Comma-separated component names, or 'all'. Defaults to Pile-CC.",
+    )
+    args, _ = parser.parse_known_args()
+
+    if args.batch:
+        if args.components == "all":
+            components = PILE_COMPONENTS
+        elif args.components:
+            components = [c.strip() for c in args.components.split(",")]
+        else:
+            components = ["Pile-CC"]
+        batch_run(args.tokens, args.max_subtokens, components)
     else:
-        single_run()
+        print("[main] Starting...")
+        multi_component_run()
 
 
 if __name__ == "__main__":

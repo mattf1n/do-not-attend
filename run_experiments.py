@@ -5,29 +5,37 @@ Entry point for running all hypothesis experiments against a saved output JSON
 (produced by main.py). Does not re-run the model except for exp3 (key vectors).
 
 Usage:
-    python run_experiments.py                                  # uses default path
-    python run_experiments.py output/my_output.json            # custom path
-    python run_experiments.py output/my_output.json --exp 1 3  # run only exp 1 and 3
+    python run_experiments.py                                    # uses default path
+    python run_experiments.py output/my_output.json              # single JSON
+    python run_experiments.py output/my_output.json --exp 2 3    # run only exp 2 and 3
+    python run_experiments.py --folder output/500_tokens/        # all JSONs in folder
+    python run_experiments.py --folder output/500_tokens/ --exp 4 6  # subset of exps
 
 Experiments:
-    1 — Pairwise difference histograms: tok_1 - tok_0 per row, per head
     2 — Box-whisker plots: attention score distributions per subtoken per head
     3 — Key vector polar coordinates: geometric comparison of subtoken key vectors
         (requires re-running the model to extract past_key_values)
     4 — Hypothesis rate heatmap: 2D grid of (layer x head) hypothesis rates
     5 — Per-layer hypothesis rate bar chart: mean rate across heads per layer
+    6 — Michelson contrast heatmap: scale-invariant (tok_1 - tok_0) / (tok_1 + tok_0) per head
+    7 — Per-layer Michelson contrast bar chart: mean contrast across heads per layer
 
 Output folder structure:
     visuals/<dataset_slug>/
-        diff_histograms/
         boxplots/
         polar/
-        heatmap/
-        layer_heatmap/
+        rate_head_heatmap/
+        rate_layer_bar/
+        contrast_heatmap/
+        contrast_layer_bar/
 
     The dataset_slug is derived from the JSON filename, e.g.:
         output/10_paragraphs_2-token_max_word_output.json
         → visuals/10_paragraphs_2-token_max_word/
+
+    In --folder mode each JSON is nested under the input folder name, e.g.:
+        output/500_tokens/PubMed_Abstracts_500tokens.json
+        → visuals/500_tokens/PubMed_Abstracts_500tokens/
 """
 
 import argparse
@@ -38,12 +46,10 @@ from pathlib import Path
 from analysis import (
     compute_head_hypothesis_rates,
     compute_layer_hypothesis_rates,
-    get_biword_score_pairs_diff,
     get_biword_score_pairs_contrast,
     compute_layer_contrast_means,
 )
 from visualizations import (
-    plot_diff_heatmap,
     plot_diff_contrast_heatmap,
     plot_layer_contrast_bar,
     plot_per_layer_box_whisker,
@@ -112,23 +118,6 @@ def get_unique_base_dir(slug: str) -> str:
         if not candidate.exists():
             return str(candidate)
         counter += 1
-
-
-def run_exp1(
-    json_path: str,
-    output_dir: str,
-    nrows: int = 8,
-    ncols: int = 4,
-) -> None:
-    """
-    Experiment 1: Mean pairwise difference heatmap (tok_1 - tok_0 per head).
-    Saves a single heatmap PNG indexed by (layer, head).
-    """
-    print("\n=== Experiment 1: Mean Pairwise Difference Heatmap ===")
-    diffs = get_biword_score_pairs_diff(json_path)
-    print(f"Loaded {sum(len(v) for v in diffs.values())} paired differences "
-          f"across {len(diffs)} (layer, head) pairs.")
-    plot_diff_heatmap(diffs, output_dir=output_dir)
 
 
 def run_exp2(
@@ -271,6 +260,53 @@ def run_exp7(
     plot_layer_contrast_bar(layer_contrasts, output_dir=output_dir)
 
 
+def _run_all_exps(json_path: str, base_dir: str, args) -> None:
+    """Run all selected experiments for a single JSON file, writing into base_dir."""
+    if 2 in args.exp:
+        run_exp2(
+            json_path,
+            output_dir=f"{base_dir}/boxplots",
+            nrows=args.nrows,
+            ncols=args.ncols,
+        )
+
+    if 3 in args.exp:
+        run_exp3(
+            json_path,
+            output_dir=f"{base_dir}/polar",
+            nrows=args.nrows,
+            ncols=args.ncols,
+        )
+
+    if 4 in args.exp:
+        run_exp4(
+            json_path,
+            output_dir=f"{base_dir}/rate_head_heatmap",
+            threshold=args.threshold,
+        )
+
+    if 5 in args.exp:
+        run_exp5(
+            json_path,
+            output_dir=f"{base_dir}/rate_layer_bar",
+            threshold=args.threshold,
+        )
+
+    if 6 in args.exp:
+        run_exp6(
+            json_path,
+            output_dir=f"{base_dir}/contrast_heatmap",
+        )
+
+    if 7 in args.exp:
+        run_exp7(
+            json_path,
+            output_dir=f"{base_dir}/contrast_layer_bar",
+        )
+
+    print(f"\nAll selected experiments complete. Outputs in {base_dir}/")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Run attention hypothesis experiments.")
     parser.add_argument(
@@ -278,6 +314,13 @@ def main():
         nargs="?",
         default=DEFAULT_JSON_PATH,
         help=f"Path to the output JSON from main.py (default: {DEFAULT_JSON_PATH})",
+    )
+    parser.add_argument(
+        "--folder",
+        default=None,
+        help="Path to a folder of per-component JSONs (e.g. output/500_tokens/). "
+             "Runs experiments separately for each .json file found. "
+             "If given, json_path and --npz are ignored.",
     )
     parser.add_argument(
         "--npz",
@@ -289,9 +332,9 @@ def main():
         "--exp",
         nargs="+",
         type=int,
-        choices=[1, 2, 3, 4, 5, 6, 7],
-        default=[1, 2, 3, 4, 5, 6, 7],
-        help="Which experiments to run (default: all). E.g. --exp 1 4",
+        choices=[2, 3, 4, 5, 6, 7],
+        default=[2, 3, 4, 5, 6, 7],
+        help="Which experiments to run (default: all). E.g. --exp 2 4",
     )
     parser.add_argument(
         "--threshold",
@@ -308,71 +351,38 @@ def main():
 
     args = parser.parse_args()
 
-    json_path, is_temp = resolve_json_path(args)
-    slug = get_dataset_slug(json_path, npz_path=args.npz)
-    base_dir = get_unique_base_dir(slug)
+    if args.folder:
+        json_files = sorted(Path(args.folder).glob("*.json"))
+        if not json_files:
+            print(f"No .json files found in {args.folder}")
+            return
+        print(f"Folder mode: found {len(json_files)} JSON file(s) in {args.folder}")
+        print(f"Experiments to run: {args.exp}\n")
+        folder_name = Path(args.folder).name
+        for json_file in json_files:
+            json_path = str(json_file)
+            slug = get_dataset_slug(json_path)
+            base_dir = get_unique_base_dir(f"{folder_name}/{slug}")
+            print(f"--- Input: {json_path}")
+            print(f"    Output base dir: {base_dir}/")
+            _run_all_exps(json_path, base_dir, args)
+    else:
+        is_temp = False
+        try:
+            json_path, is_temp = resolve_json_path(args)
+            slug = get_dataset_slug(json_path, npz_path=args.npz)
+            base_dir = get_unique_base_dir(slug)
 
-    source_label = args.npz if args.npz else json_path
-    print(f"Input:               {source_label}")
-    print(f"Dataset slug:        {slug}")
-    print(f"Output base dir:     {base_dir}/")
-    print(f"Experiments to run:  {args.exp}")
+            source_label = args.npz if args.npz else json_path
+            print(f"Input:               {source_label}")
+            print(f"Dataset slug:        {slug}")
+            print(f"Output base dir:     {base_dir}/")
+            print(f"Experiments to run:  {args.exp}")
 
-    try:
-        if 1 in args.exp:
-            run_exp1(
-                json_path,
-                output_dir=f"{base_dir}/diff_heatmap",
-                nrows=args.nrows,
-                ncols=args.ncols,
-            )
-
-        if 2 in args.exp:
-            run_exp2(
-                json_path,
-                output_dir=f"{base_dir}/boxplots",
-                nrows=args.nrows,
-                ncols=args.ncols,
-            )
-
-        if 3 in args.exp:
-            run_exp3(
-                json_path,
-                output_dir=f"{base_dir}/polar",
-                nrows=args.nrows,
-                ncols=args.ncols,
-            )
-
-        if 4 in args.exp:
-            run_exp4(
-                json_path,
-                output_dir=f"{base_dir}/rate_head_heatmap",
-                threshold=args.threshold,
-            )
-
-        if 5 in args.exp:
-            run_exp5(
-                json_path,
-                output_dir=f"{base_dir}/rate_layer_bar",
-                threshold=args.threshold,
-            )
-
-        if 6 in args.exp:
-            run_exp6(
-                json_path,
-                output_dir=f"{base_dir}/contrast_heatmap",
-            )
-
-        if 7 in args.exp:
-            run_exp7(
-                json_path,
-                output_dir=f"{base_dir}/contrast_layer_bar",
-            )
-
-        print(f"\nAll selected experiments complete. Outputs in {base_dir}/")
-    finally:
-        if is_temp:
-            Path(json_path).unlink(missing_ok=True)
+            _run_all_exps(json_path, base_dir, args)
+        finally:
+            if is_temp:
+                Path(json_path).unlink(missing_ok=True)
 
 
 if __name__ == "__main__":

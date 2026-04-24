@@ -38,6 +38,10 @@ save_output_npz("output/my_output.json", "output/binary/")
 # creates output/binary/my_output/my_output.npz + my_output_meta.json
 ```
 
+
+
+NOTE: **I use \n\n in the middle of samples in order to make one string**
+
 Note: when `--npz` is used, the data is loaded into memory and written to a temporary JSON file behind the scenes, which is deleted automatically when the run finishes.
 
 

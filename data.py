@@ -26,7 +26,7 @@ PILE_COMPONENTS = [
     "HackerNews",
     "NIH ExPorter",
     "PubMed Abstracts",
-    "Enron Emails",
+    # "Enron Emails",
     # "EuroParl",
     "PhilPapers",
     # "Ubuntu IRC",

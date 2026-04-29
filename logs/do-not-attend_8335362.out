@@ -1,0 +1,11 @@
+==========================================
+SLURM_JOB_ID = 8335362
+SLURM_JOB_NODELIST = d05-11
+TMPDIR = /tmp/SLURM_8335362
+==========================================
+=== Job started: Fri Apr 24 20:52:01 PDT 2026 ===
+Node: d05-11
+[main] --- Batch Run ---
+[main] num_tokens=30000, max_num_subtokens=2
+[main] components: ['Pile-CC', 'PubMed Central', 'FreeLaw', 'USPTO Backgrounds', 'Wikipedia (en)', 'HackerNews', 'NIH ExPorter', 'PubMed Abstracts', 'PhilPapers', 'Gutenberg (PG-19)']
+[main] Loading model and tokenizer...

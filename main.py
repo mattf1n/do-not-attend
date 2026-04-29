@@ -13,7 +13,7 @@ import torch
 
 from model import get_model, get_attentions
 from tokenization import get_multi_token_words, summarize_multi_token_words
-from analysis import aggregate_multi_token_word_attentions
+from analysis import aggregate_multi_token_word_attentions, get_attentions_streaming
 from data import get_data_samples, PILE_COMPONENTS
 
 
@@ -48,17 +48,24 @@ def _get_max_num_subtokens_input(default=2):
 
 def _run_pipeline(text, component, num_tokens, max_num_subtokens, model, tokenizer):
     """Run the full attention + multi-token-word pipeline for one (text, component) pair."""
-    print(f"[main] Getting attentions from model for component='{component}'...")
-    attentions = get_attentions(text, model, tokenizer)
-    print("[main] Attentions extracted.")
-
     print("[main] Getting multi-token words from text...")
     multi_token_words_map = get_multi_token_words(text, tokenizer, max_num_subtokens)
     print(f"[main] Found {len(multi_token_words_map)} unique multi-token words.")
 
-    print("[main] Aggregating attentions for multi-token words...")
-    multi_token_word_attention_map = aggregate_multi_token_word_attentions(attentions, multi_token_words_map)
-    print("[main] Aggregation complete.")
+    if num_tokens > 10000:
+        print(f"[main] num_tokens={num_tokens} > 10000 — using streaming aggregation (get_attentions_streaming).")
+        print(f"[main] Getting attentions (streaming) for component='{component}'...")
+        multi_token_word_attention_map = get_attentions_streaming(text, model, tokenizer, multi_token_words_map)
+        print("[main] Streaming aggregation complete.")
+    else:
+        # Standard two-step pipeline (used when num_tokens <= 10000):
+        print(f"[main] num_tokens={num_tokens} <= 10000 — using standard pipeline (get_attentions + aggregate_multi_token_word_attentions).")
+        print(f"[main] Getting attentions from model for component='{component}'...")
+        attentions = get_attentions(text, model, tokenizer)
+        print("[main] Attentions extracted.")
+        print("[main] Aggregating attentions for multi-token words...")
+        multi_token_word_attention_map = aggregate_multi_token_word_attentions(attentions, multi_token_words_map)
+        print("[main] Aggregation complete.")
 
     num_unique_mt_words, num_mt_word_occurrences = summarize_multi_token_words(multi_token_words_map)  # mt = multi-token
 
@@ -85,6 +92,17 @@ def _safedump(obj):
 
 def _component_to_filename(component):
     return component.replace(" ", "_").replace("(", "").replace(")", "")
+
+
+def _resolve_out_dir(base_dir: str, overwrite: bool) -> str:
+    if not os.path.exists(base_dir) or overwrite:
+        return base_dir
+    n = 1
+    while True:
+        candidate = f"{base_dir}({n})"
+        if not os.path.exists(candidate):
+            return candidate
+        n += 1
 
 
 def _write_stats_doc(out_dir, stats_rows, max_tokens, max_num_subtokens, mode, timestamp,
@@ -186,8 +204,15 @@ def multi_component_run():
 
     print(f"[main] Will run for components: {components}")
 
-    out_dir = f"output/{num_tokens}_tokens"
+    base_dir = f"output/{num_tokens}_tokens"
+    if os.path.exists(base_dir):
+        choice = input(f"[main] '{base_dir}' already exists. Overwrite? [y/N]: ").strip().lower()
+        overwrite = choice == "y"
+    else:
+        overwrite = False
+    out_dir = _resolve_out_dir(base_dir, overwrite)
     os.makedirs(out_dir, exist_ok=True)
+    print(f"[main] Output directory: {out_dir}")
 
     print("[main] Loading model and tokenizer (once for all components)...")
     model, tokenizer = get_model()
@@ -255,7 +280,7 @@ def multi_component_run():
     print(f"\n[main] All components complete. Total time: {total_duration:.2f}s")
 
 
-def batch_run(num_tokens, max_num_subtokens, components):
+def batch_run(num_tokens, max_num_subtokens, components, overwrite=False):
     """Non-interactive version of multi_component_run for SBATCH jobs."""
     import argparse
     print("[main] --- Batch Run ---")
@@ -270,8 +295,9 @@ def batch_run(num_tokens, max_num_subtokens, components):
     print(f"[main] num_tokens={num_tokens}, max_num_subtokens={max_num_subtokens}")
     print(f"[main] components: {components}")
 
-    out_dir = f"output/{num_tokens}_tokens"
+    out_dir = _resolve_out_dir(f"output/{num_tokens}_tokens", overwrite)
     os.makedirs(out_dir, exist_ok=True)
+    print(f"[main] Output directory: {out_dir}")
 
     print("[main] Loading model and tokenizer...")
     model, tokenizer = get_model()
@@ -342,6 +368,10 @@ def main():
         "--components", type=str, default=None,
         help="Comma-separated component names, or 'all'. Defaults to Pile-CC.",
     )
+    parser.add_argument(
+        "--overwrite", action="store_true",
+        help="Overwrite existing output folder instead of creating a numbered duplicate.",
+    )
     args, _ = parser.parse_known_args()
 
     if args.batch:
@@ -351,7 +381,7 @@ def main():
             components = [c.strip() for c in args.components.split(",")]
         else:
             components = ["Pile-CC"]
-        batch_run(args.tokens, args.max_subtokens, components)
+        batch_run(args.tokens, args.max_subtokens, components, overwrite=args.overwrite)
     else:
         print("[main] Starting...")
         multi_component_run()

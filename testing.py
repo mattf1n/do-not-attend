@@ -15,25 +15,27 @@ warnings.filterwarnings("ignore", message=".*rope_parameters.*")
 transformers_logging.set_verbosity_error()
 disable_progress_bar()
 
-PILE_COMPONENTS = [
-    "Pile-CC",
-    "PubMed Central",
-    # "ArXiv",
-    # "GitHub",
-    "FreeLaw",
-    # "Stack Exchange",
-    "USPTO Backgrounds",
-    # "DM Mathematics",
-    "Wikipedia (en)",
-    "HackerNews",
-    "NIH ExPorter",
-    "PubMed Abstracts",
-    "Enron Emails",
-    # "EuroParl",
-    "PhilPapers",
-    # "Ubuntu IRC",
-    "Gutenberg (PG-19)",
-]
+
+from data import PILE_COMPONENTS
+# PILE_COMPONENTS = [
+#     "Pile-CC",
+#     "PubMed Central",
+#     # "ArXiv",
+#     # "GitHub",
+#     "FreeLaw",
+#     # "Stack Exchange",
+#     "USPTO Backgrounds",
+#     # "DM Mathematics",
+#     "Wikipedia (en)",
+#     "HackerNews",
+#     "NIH ExPorter",
+#     "PubMed Abstracts",
+#     "Enron Emails",
+#     # "EuroParl",
+#     "PhilPapers",
+#     # "Ubuntu IRC",
+#     "Gutenberg (PG-19)",
+# ]
 
 
 def analyze_single_component():

@@ -1,17 +1,17 @@
 #!/bin/bash
 #SBATCH --job-name=do-not-attend
-#SBATCH --partition=main
+#SBATCH --partition=largemem
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=64
-#SBATCH --mem=185G
+#SBATCH --mem=1498G
 #SBATCH --time=2-00:00:00
 #SBATCH --account=swabhas_1625
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
 
 # ── Edit these to control the run ────────────────────────────────────────────
-TOKENS=30000
+TOKENS=16000
 MAX_SUBTOKENS=2
 COMPONENTS="all"   # "all", "Pile-CC", or comma-separated e.g. "Wikipedia (en),HackerNews"
 OVERWRITE=false    # set to true to overwrite an existing output folder; false creates a duplicate e.g. 30000_tokens(1)
@@ -33,7 +33,6 @@ OVERWRITE_FLAG=""
 if [ "$OVERWRITE" = "true" ]; then
     OVERWRITE_FLAG="--overwrite"
 fi
-
 uv run main.py \
     --batch \
     --tokens "$TOKENS" \

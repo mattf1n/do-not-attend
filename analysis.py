@@ -1,4 +1,6 @@
+import math
 import torch
+import torch.nn.functional as F
 from collections import defaultdict
 from utils import load_json
 
@@ -287,6 +289,189 @@ def get_attentions_streaming(text, model, tokenizer, multi_word_map):
     finally:
         for h in handles:
             h.remove()
+
+    return agg.finalize()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# HEAD-BY-HEAD AGGREGATOR (one (S,S) attention matrix per head at a time)
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+class HeadByHeadAggregator:
+    """
+    Streaming aggregator that accepts one attention head at a time.
+
+    Designed to be driven from a patched self_attn.forward that computes the
+    (S, S) attention matrix for each head sequentially, aggregates it, and frees
+    it before moving to the next head — a 32× reduction in peak attention memory
+    vs MultiTokenWordAggregator for OLMo-3-7B (H=32).
+
+    Heads must be delivered in order: all heads for layer 0, then layer 1, etc.
+
+    Output schema from finalize() is identical to MultiTokenWordAggregator.
+    """
+
+    def __init__(self, multi_word_map):
+        self.occ_meta = {}
+        for word, info in multi_word_map.items():
+            if not (isinstance(info, dict) and "occurrences" in info):
+                raise ValueError(
+                    f"Expected occurrences schema for word '{word}', got: {info}"
+                )
+            self.occ_meta[word] = [
+                {
+                    "token_indices": occ["token_indices"],
+                    "pos": torch.as_tensor(occ["token_indices"], dtype=torch.long),
+                    "start": int(torch.as_tensor(occ["token_indices"]).max()) + 1,
+                }
+                for occ in info["occurrences"]
+            ]
+        self.layers_data = {word: [[] for _ in occs] for word, occs in self.occ_meta.items()}
+        self._layer_buf = {word: [[] for _ in occs] for word, occs in self.occ_meta.items()}
+        self._cur_layer = -1
+
+    def _flush(self):
+        if self._cur_layer < 0:
+            return
+        for word, occs in self.occ_meta.items():
+            for i in range(len(occs)):
+                heads = self._layer_buf[word][i]
+                if heads:
+                    self.layers_data[word][i].append({"heads": heads})
+                    self._layer_buf[word][i] = []
+
+    def add_head(self, attn_head, layer_idx, head_idx):
+        """
+        Reduce one head's (S, S) attention tensor and buffer it.
+
+        attn_head: torch.Tensor of shape (S, S), any device/dtype.
+        layer_idx / head_idx must arrive in ascending layer order
+        (all heads for layer 0 before any head for layer 1, etc.).
+        """
+        if layer_idx != self._cur_layer:
+            self._flush()
+            self._cur_layer = layer_idx
+        device = attn_head.device
+        for word, occs in self.occ_meta.items():
+            for i, occ in enumerate(occs):
+                pos = occ["pos"].to(device)
+                start = occ["start"]
+                score = attn_head[start:, pos].mean(dim=0).detach().cpu().to(torch.float16)
+                self._layer_buf[word][i].append(score)
+
+    def finalize(self):
+        self._flush()
+        out = {}
+        for word, occs in self.occ_meta.items():
+            out[word] = {
+                "occurrences": [
+                    {
+                        "token_indices": occ["token_indices"],
+                        "attentions": {"layers": self.layers_data[word][i]},
+                    }
+                    for i, occ in enumerate(occs)
+                ]
+            }
+        return out
+
+
+def _repeat_kv(x, n_rep):
+    """Expand key/value states from num_kv_heads to num_heads for GQA."""
+    if n_rep == 1:
+        return x
+    bsz, n_kv_h, s, d = x.shape
+    return (
+        x[:, :, None, :, :]
+        .expand(bsz, n_kv_h, n_rep, s, d)
+        .reshape(bsz, n_kv_h * n_rep, s, d)
+    )
+
+
+def get_attentions_head_streaming(text, model, tokenizer, multi_word_map):
+    """
+    Head-by-head variant of get_attentions_streaming.
+
+    Patches each layer's self_attn.forward to compute attention for one head
+    at a time so the peak attention tensor is (S, S) instead of (H, S, S).
+    For OLMo-3-7B (H=32) this is a ~32× reduction in attention memory.
+
+    Tradeoff: ~2–4× slower per layer than get_attentions_streaming because
+    the H parallel head matmuls become H sequential matmuls.
+
+    Returns the same dict schema as get_attentions_streaming.
+    """
+    try:
+        from transformers.models.olmo.modeling_olmo import apply_rotary_pos_emb
+    except ImportError:
+        from transformers.models.llama.modeling_llama import apply_rotary_pos_emb
+
+    device = next(model.parameters()).device
+    inputs = tokenizer(text, return_tensors="pt")
+    inputs = {k: v.to(device) for k, v in inputs.items()}
+
+    agg = HeadByHeadAggregator(multi_word_map)
+
+    def make_patched_forward(sa, layer_idx):
+        def patched_forward(hidden_states, attention_mask=None, position_ids=None,
+                            past_key_value=None, output_attentions=False,
+                            use_cache=False, cache_position=None,
+                            position_embeddings=None, **kwargs):
+            bsz, q_len, _ = hidden_states.shape
+
+            q = sa.q_proj(hidden_states)
+            k = sa.k_proj(hidden_states)
+            v = sa.v_proj(hidden_states)
+
+            q = q.view(bsz, q_len, sa.num_heads, sa.head_dim).transpose(1, 2)
+            k = k.view(bsz, q_len, sa.num_key_value_heads, sa.head_dim).transpose(1, 2)
+            v = v.view(bsz, q_len, sa.num_key_value_heads, sa.head_dim).transpose(1, 2)
+
+            if position_embeddings is not None:
+                cos, sin = position_embeddings
+            else:
+                cos, sin = sa.rotary_emb(v, position_ids)
+            q, k = apply_rotary_pos_emb(q, k, cos, sin)
+
+            n_kv_groups = sa.num_heads // sa.num_key_value_heads
+            k = _repeat_kv(k, n_kv_groups)
+            v = _repeat_kv(v, n_kv_groups)
+
+            scale = 1.0 / math.sqrt(sa.head_dim)
+            attn_out = torch.zeros_like(q)
+
+            for h in range(sa.num_heads):
+                q_h = q[:, h:h+1]   # (bsz, 1, q_len, head_dim)
+                k_h = k[:, h:h+1]
+                v_h = v[:, h:h+1]
+
+                scores = torch.matmul(q_h, k_h.transpose(-2, -1)) * scale  # (bsz, 1, S, S)
+                if attention_mask is not None:
+                    scores = scores + attention_mask
+                scores = F.softmax(scores, dim=-1, dtype=torch.float32).to(q.dtype)
+
+                agg.add_head(scores[0, 0], layer_idx, h)   # (S, S)
+
+                attn_out[:, h:h+1] = torch.matmul(scores, v_h)
+                del scores
+
+            attn_out = attn_out.transpose(1, 2).contiguous().view(bsz, q_len, -1)
+            attn_out = sa.o_proj(attn_out)
+            return attn_out, None, past_key_value
+
+        return patched_forward
+
+    n = model.config.num_hidden_layers
+    originals = [layer.self_attn.forward for layer in model.model.layers[:n]]
+    for i, layer in enumerate(model.model.layers[:n]):
+        layer.self_attn.forward = make_patched_forward(layer.self_attn, i)
+
+    try:
+        with torch.no_grad():
+            model(**inputs, use_cache=False)
+    finally:
+        for i, layer in enumerate(model.model.layers[:n]):
+            layer.self_attn.forward = originals[i]
 
     return agg.finalize()
 

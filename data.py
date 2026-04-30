@@ -14,23 +14,23 @@ from model import get_tokenizer
 
 
 PILE_COMPONENTS = [
-    "Pile-CC",
-    "PubMed Central",
-    # "ArXiv",
-    # "GitHub",
+    # "Pile-CC",  #later with more memory
+    # "PubMed Central",  #later with more memory
+    # "ArXiv", #formatting 
+    # "GitHub", #formatting
     "FreeLaw",
-    # "Stack Exchange",
+    # "Stack Exchange", #formatting
     "USPTO Backgrounds",
-    # "DM Mathematics",
+    # "DM Mathematics", #formatting
     "Wikipedia (en)",
-    "HackerNews",
+    # "HackerNews",  #later with more memory
     "NIH ExPorter",
     "PubMed Abstracts",
-    # "Enron Emails",
-    # "EuroParl",
+    # "Enron Emails", #formatting
+    # "EuroParl", #formatting
     "PhilPapers",
-    # "Ubuntu IRC",
-    "Gutenberg (PG-19)",
+    # "Ubuntu IRC", #formatting
+    # "Gutenberg (PG-19)", #later with more memory
 ]
 
 def get_data(component="all", dataset_name=DEFAULT_DATASET):

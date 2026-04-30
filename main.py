@@ -13,7 +13,7 @@ import torch
 
 from model import get_model, get_attentions
 from tokenization import get_multi_token_words, summarize_multi_token_words
-from analysis import aggregate_multi_token_word_attentions, get_attentions_streaming
+from analysis import aggregate_multi_token_word_attentions
 from data import get_data_samples, PILE_COMPONENTS
 
 
@@ -52,20 +52,21 @@ def _run_pipeline(text, component, num_tokens, max_num_subtokens, model, tokeniz
     multi_token_words_map = get_multi_token_words(text, tokenizer, max_num_subtokens)
     print(f"[main] Found {len(multi_token_words_map)} unique multi-token words.")
 
-    if num_tokens > 10000:
-        print(f"[main] num_tokens={num_tokens} > 10000 — using streaming aggregation (get_attentions_streaming).")
-        print(f"[main] Getting attentions (streaming) for component='{component}'...")
-        multi_token_word_attention_map = get_attentions_streaming(text, model, tokenizer, multi_token_words_map)
-        print("[main] Streaming aggregation complete.")
-    else:
+    # if num_tokens > 10000:
+    #     print(f"[main] num_tokens={num_tokens} > 10000 — using streaming aggregation (get_attentions_streaming).")
+    #     print(f"[main] Getting attentions (streaming) for component='{component}'...")
+    #     multi_token_word_attention_map = get_attentions_streaming(text, model, tokenizer, multi_token_words_map)
+    #     print("[main] Streaming aggregation complete.")
+    # else:
         # Standard two-step pipeline (used when num_tokens <= 10000):
-        print(f"[main] num_tokens={num_tokens} <= 10000 — using standard pipeline (get_attentions + aggregate_multi_token_word_attentions).")
-        print(f"[main] Getting attentions from model for component='{component}'...")
-        attentions = get_attentions(text, model, tokenizer)
-        print("[main] Attentions extracted.")
-        print("[main] Aggregating attentions for multi-token words...")
-        multi_token_word_attention_map = aggregate_multi_token_word_attentions(attentions, multi_token_words_map)
-        print("[main] Aggregation complete.")
+        # print(f"[main] num_tokens={num_tokens} <= 10000 — using standard pipeline (get_attentions + aggregate_multi_token_word_attentions).")
+    print(f"[main] Getting attentions from model for component='{component}'...")
+    attentions = get_attentions(text, model, tokenizer)
+    print("[main] Attentions extracted.")
+    print("[main] Aggregating attentions for multi-token words...")
+    multi_token_word_attention_map = aggregate_multi_token_word_attentions(attentions, multi_token_words_map)
+    del attentions
+    print("[main] Aggregation complete.")
 
     num_unique_mt_words, num_mt_word_occurrences = summarize_multi_token_words(multi_token_words_map)  # mt = multi-token
 
@@ -249,6 +250,9 @@ def multi_component_run():
             json.dump(out, f, ensure_ascii=False, indent=2, default=_safedump)
         print(f"[main] Saved: {out_path}")
 
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
         stats_rows.append({
             'component': component,
             'num_samples': metadata['num_samples'],
@@ -328,6 +332,9 @@ def batch_run(num_tokens, max_num_subtokens, components, overwrite=False):
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(out, f, ensure_ascii=False, indent=2, default=_safedump)
         print(f"[main] Saved: {out_path}")
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
         stats_rows.append({
             'component': component,

@@ -40,5 +40,4 @@ uv run main.py \
     --max-subtokens "$MAX_SUBTOKENS" \
     --components "$COMPONENTS" \
     $OVERWRITE_FLAG
-
 echo "=== Job finished: $(date) ==="

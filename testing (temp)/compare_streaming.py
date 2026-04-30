@@ -1,18 +1,20 @@
 """
-Compare all three aggregation pipelines for multi-token word attentions.
+Compare all four aggregation pipelines for multi-token word attentions.
 
 Benchmarks (full pipeline — model forward pass included in each):
   1. OLD      : get_attentions + aggregate_multi_token_word_attentions_old
   2. NEW      : get_attentions + aggregate_multi_token_word_attentions
   3. STREAMING: get_attentions_streaming  (hook-based, one layer at a time)
+  4. HEAD     : get_attentions_head_streaming  (patched forward, one head at a time)
 
 Reports wall-clock time, RSS peak delta, and Python heap peak for each,
-verifies that all three outputs are numerically equal, then prints a summary.
+verifies that outputs are numerically equal, then prints a summary.
 
 Usage:
     python compare_streaming.py                     # uses the_multi.json + Enron dataset
     python compare_streaming.py --tokens 2000       # override token budget
     python compare_streaming.py --text-file foo.txt # supply your own text
+    python compare_streaming.py --skip old,new      # skip OOM-prone pipelines at large S
 """
 
 import argparse
@@ -32,6 +34,7 @@ from analysis import (
     aggregate_multi_token_word_attentions,
     aggregate_multi_token_word_attentions_old,
     get_attentions_streaming,
+    get_attentions_head_streaming,
 )
 from model import get_attentions, get_model
 
@@ -172,6 +175,10 @@ def run_streaming(text, model, tokenizer, multi_word_map):
     return get_attentions_streaming(text, model, tokenizer, multi_word_map)
 
 
+def run_head(text, model, tokenizer, multi_word_map):
+    return get_attentions_head_streaming(text, model, tokenizer, multi_word_map)
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Benchmark runner
 # ─────────────────────────────────────────────────────────────────────────────
@@ -240,7 +247,14 @@ def main():
     parser.add_argument("--tokens", type=int, default=None)
     parser.add_argument("--component", type=str, default="Enron Emails")
     parser.add_argument("--atol", type=float, default=1e-3)
+    parser.add_argument(
+        "--skip", type=str, default="",
+        help="Comma-separated list of pipelines to skip: old, new, streaming, head. "
+             "Useful at large S where old/new OOM. Example: --skip old,new",
+    )
     args = parser.parse_args()
+
+    skip = {s.strip().lower() for s in args.skip.split(",") if s.strip()}
 
     print(f"Loading multi_word_map from {args.multi_word_path}...")
     multi_word_map, embedded_text = load_multi_word_map(args.multi_word_path)
@@ -270,29 +284,65 @@ def main():
 
     # ── Benchmarks ────────────────────────────────────────────────────────────
 
-    old_result, t_old, rss_old, py_old = benchmark(
-        "OLD       (get_attentions + aggregate_old)",
-        run_old, text, model, tokenizer, multi_word_map,
-    )
-    gc.collect()
+    old_result = new_result = stream_result = head_result = None
+    t_old = t_new = t_stream = t_head = None
+    rss_old = rss_new = rss_stream = rss_head = None
+    py_old = py_new = py_stream = py_head = None
 
-    new_result, t_new, rss_new, py_new = benchmark(
-        "NEW       (get_attentions + aggregate_new)",
-        run_new, text, model, tokenizer, multi_word_map,
-    )
-    gc.collect()
+    if "old" not in skip:
+        old_result, t_old, rss_old, py_old = benchmark(
+            "OLD       (get_attentions + aggregate_old)",
+            run_old, text, model, tokenizer, multi_word_map,
+        )
+        gc.collect()
+    else:
+        print("[OLD] skipped")
 
-    stream_result, t_stream, rss_stream, py_stream = benchmark(
-        "STREAMING (get_attentions_streaming)",
-        run_streaming, text, model, tokenizer, multi_word_map,
-    )
+    if "new" not in skip:
+        new_result, t_new, rss_new, py_new = benchmark(
+            "NEW       (get_attentions + aggregate_new)",
+            run_new, text, model, tokenizer, multi_word_map,
+        )
+        gc.collect()
+    else:
+        print("[NEW] skipped")
+
+    if "streaming" not in skip:
+        stream_result, t_stream, rss_stream, py_stream = benchmark(
+            "STREAMING (get_attentions_streaming)",
+            run_streaming, text, model, tokenizer, multi_word_map,
+        )
+        gc.collect()
+    else:
+        print("[STREAMING] skipped")
+
+    if "head" not in skip:
+        head_result, t_head, rss_head, py_head = benchmark(
+            "HEAD      (get_attentions_head_streaming)",
+            run_head, text, model, tokenizer, multi_word_map,
+        )
+        gc.collect()
+    else:
+        print("[HEAD] skipped")
 
     # ── Equality ──────────────────────────────────────────────────────────────
 
     print("\n--- equality ---")
-    assert_results_equal("OLD", old_result, "NEW",       new_result,    atol=args.atol)
-    assert_results_equal("OLD", old_result, "STREAMING", stream_result, atol=args.atol)
-    assert_results_equal("NEW", new_result, "STREAMING", stream_result, atol=args.atol)
+    results = {
+        "OLD": old_result,
+        "NEW": new_result,
+        "STREAMING": stream_result,
+        "HEAD": head_result,
+    }
+    available = [(k, v) for k, v in results.items() if v is not None]
+    for i in range(len(available)):
+        for j in range(i + 1, len(available)):
+            label_a, res_a = available[i]
+            label_b, res_b = available[j]
+            assert_results_equal(label_a, res_a, label_b, res_b, atol=args.atol)
+
+    if len(available) < 2:
+        print("  (fewer than 2 pipelines ran — nothing to compare)")
 
     # ── Summary ───────────────────────────────────────────────────────────────
 
@@ -300,17 +350,27 @@ def main():
     header = f"  {'':12s}  {'time (s)':>10}  {'RSS peak Δ':>12}  {'py heap peak':>14}"
     print(header)
     print("  " + "-" * (len(header) - 2))
-    for label, t, rss, py in [
+    all_rows = [
         ("OLD",       t_old,    rss_old,    py_old),
         ("NEW",       t_new,    rss_new,    py_new),
         ("STREAMING", t_stream, rss_stream, py_stream),
-    ]:
-        print(f"  {label:12s}  {t:>10.3f}  {_fmt_bytes(rss):>12}  {_fmt_bytes(py):>14}")
+        ("HEAD",      t_head,   rss_head,   py_head),
+    ]
+    for label, t, rss, py in all_rows:
+        if t is None:
+            print(f"  {label:12s}  {'(skipped)':>10}")
+        else:
+            print(f"  {label:12s}  {t:>10.3f}  {_fmt_bytes(rss):>12}  {_fmt_bytes(py):>14}")
 
-    fastest = min(t_old, t_new, t_stream)
-    lowest_rss = min(rss_old, rss_new, rss_stream)
-    print(f"\n  vs OLD — NEW: {t_old/t_new:.2f}x time, {rss_old/rss_new if rss_new else float('inf'):.2f}x RSS")
-    print(f"  vs OLD — STREAMING: {t_old/t_stream:.2f}x time, {rss_old/rss_stream if rss_stream else float('inf'):.2f}x RSS")
+    # Relative comparisons for pairs that ran
+    ran = [(label, t, rss) for label, t, rss, _ in all_rows if t is not None]
+    if len(ran) >= 2:
+        ref_label, ref_t, ref_rss = ran[0]
+        print()
+        for label, t, rss in ran[1:]:
+            t_ratio = ref_t / t if t else float("inf")
+            rss_ratio = ref_rss / rss if rss else float("inf")
+            print(f"  vs {ref_label} — {label}: {t_ratio:.2f}x time, {rss_ratio:.2f}x RSS")
 
 
 if __name__ == "__main__":

@@ -599,6 +599,86 @@ def compute_layer_hypothesis_rates(
     return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# POOLED (MICRO-AVERAGED) FUNCTIONS — aggregate across multiple JSON files
+# ─────────────────────────────────────────────────────────────────────────────
+
+def pool_biword_score_pairs(json_paths: list) -> dict:
+    """
+    Pools raw (s0, s1) pairs from multiple JSON files into one dict.
+    Equivalent to micro-averaging / weighted macro-average by occurrences.
+
+    Returns:
+        { (layer_idx, head_idx): [(s0, s1), ...] }  — all occurrences combined
+    """
+    merged = defaultdict(list)
+    for path in json_paths:
+        for key, pairs in get_biword_score_pairs(path).items():
+            merged[key].extend(pairs)
+    return dict(merged)
+
+
+def pool_biword_score_pairs_contrast(json_paths: list) -> dict:
+    """
+    Pools pairs across files and computes Michelson contrast on the pooled data.
+
+    Returns:
+        { (layer_idx, head_idx): [contrast, ...] }
+    """
+    pooled = pool_biword_score_pairs(json_paths)
+    result = {}
+    for key, vals in pooled.items():
+        contrasts = []
+        for s0, s1 in vals:
+            denom = s0 + s1
+            contrasts.append((s1 - s0) / denom if denom != 0 else 0.0)
+        result[key] = contrasts
+    return result
+
+
+def pool_head_hypothesis_rates(json_paths: list) -> dict:
+    """
+    Pools pairs across files and computes per-head hypothesis rates.
+
+    Returns:
+        { (layer_idx, head_idx): float }  — values in [0, 1]
+    """
+    pooled = pool_biword_score_pairs(json_paths)
+    return {
+        key: sum(1 for s0, s1 in vals if s1 > s0) / len(vals)
+        for key, vals in pooled.items() if vals
+    }
+
+
+def pool_layer_hypothesis_rates(json_paths: list) -> dict:
+    """
+    Pools pairs across files and computes per-layer mean hypothesis rates.
+
+    Returns:
+        { layer_idx: float }  — values in [0, 1]
+    """
+    head_rates = pool_head_hypothesis_rates(json_paths)
+    layer_vals = defaultdict(list)
+    for (layer, _), rate in head_rates.items():
+        layer_vals[layer].append(rate)
+    return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
+def pool_layer_contrast_means(json_paths: list) -> dict:
+    """
+    Pools pairs across files and computes per-layer mean Michelson contrast.
+
+    Returns:
+        { layer_idx: float }  — values in [-1, 1]
+    """
+    contrasts = pool_biword_score_pairs_contrast(json_paths)
+    layer_vals = defaultdict(list)
+    for (layer, _), vals in contrasts.items():
+        if vals:
+            layer_vals[layer].append(sum(vals) / len(vals))
+    return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
 def summarize_hypothesis_coverage(
     rates: dict,
     threshold: float = 0.5,

@@ -20,6 +20,12 @@ Experiments:
     6 — Michelson contrast heatmap: scale-invariant (tok_1 - tok_0) / (tok_1 + tok_0) per head
     7 — Per-layer Michelson contrast bar chart: mean contrast across heads per layer
 
+    Pooled experiments (--folder mode only, micro-averaged across all components):
+    8  — Pooled hypothesis rate heatmap (mirrors Exp 4)
+    9  — Pooled per-layer hypothesis rate bar chart (mirrors Exp 5)
+    10 — Pooled Michelson contrast heatmap (mirrors Exp 6)
+    11 — Pooled per-layer Michelson contrast bar chart (mirrors Exp 7)
+
 Output folder structure:
     visuals/<dataset_slug>/
         boxplots/
@@ -48,6 +54,10 @@ from analysis import (
     compute_layer_hypothesis_rates,
     get_biword_score_pairs_contrast,
     compute_layer_contrast_means,
+    pool_head_hypothesis_rates,
+    pool_layer_hypothesis_rates,
+    pool_biword_score_pairs_contrast,
+    pool_layer_contrast_means,
 )
 from visualizations import (
     plot_diff_contrast_heatmap,
@@ -260,6 +270,54 @@ def run_exp7(
     plot_layer_contrast_bar(layer_contrasts, output_dir=output_dir)
 
 
+def run_exp8(json_paths: list, output_dir: str, threshold: float = DEFAULT_THRESHOLD) -> None:
+    """
+    Experiment 8: Pooled hypothesis rate heatmap (micro-averaged across components).
+    Mirrors Exp 4 but pools raw pairs from all component JSONs before computing.
+    """
+    print("\n=== Experiment 8: Pooled Hypothesis Rate Heatmap ===")
+    rates = pool_head_hypothesis_rates(json_paths)
+    passing = sum(1 for v in rates.values() if v >= threshold)
+    print(f"Threshold: {threshold:.0%} | "
+          f"{passing}/{len(rates)} heads pass ({100*passing/len(rates):.1f}%)")
+    plot_hypothesis_rate_heatmap(rates, output_dir=output_dir)
+
+
+def run_exp9(json_paths: list, output_dir: str, threshold: float = DEFAULT_THRESHOLD) -> None:
+    """
+    Experiment 9: Pooled per-layer hypothesis rate bar chart (micro-averaged).
+    Mirrors Exp 5 but pools raw pairs from all component JSONs before computing.
+    """
+    print("\n=== Experiment 9: Pooled Per-Layer Hypothesis Rate Bar Chart ===")
+    rates = pool_layer_hypothesis_rates(json_paths)
+    passing = sum(1 for v in rates.values() if v >= threshold)
+    print(f"Threshold: {threshold:.0%} | "
+          f"{passing}/{len(rates)} layers pass ({100*passing/len(rates):.1f}%)")
+    plot_layer_hypothesis_bar(rates, output_dir=output_dir, threshold=threshold)
+
+
+def run_exp10(json_paths: list, output_dir: str) -> None:
+    """
+    Experiment 10: Pooled Michelson contrast heatmap (micro-averaged across components).
+    Mirrors Exp 6 but pools raw pairs from all component JSONs before computing.
+    """
+    print("\n=== Experiment 10: Pooled Michelson Contrast Heatmap ===")
+    contrasts = pool_biword_score_pairs_contrast(json_paths)
+    print(f"Pooled {sum(len(v) for v in contrasts.values())} contrast values "
+          f"across {len(contrasts)} (layer, head) pairs.")
+    plot_diff_contrast_heatmap(contrasts, output_dir=output_dir)
+
+
+def run_exp11(json_paths: list, output_dir: str) -> None:
+    """
+    Experiment 11: Pooled per-layer Michelson contrast bar chart (micro-averaged).
+    Mirrors Exp 7 but pools raw pairs from all component JSONs before computing.
+    """
+    print("\n=== Experiment 11: Pooled Per-Layer Michelson Contrast Bar Chart ===")
+    layer_contrasts = pool_layer_contrast_means(json_paths)
+    plot_layer_contrast_bar(layer_contrasts, output_dir=output_dir)
+
+
 def _run_all_exps(json_path: str, base_dir: str, args) -> None:
     """Run all selected experiments for a single JSON file, writing into base_dir."""
     if 2 in args.exp:
@@ -332,9 +390,10 @@ def main():
         "--exp",
         nargs="+",
         type=int,
-        choices=[2, 3, 4, 5, 6, 7],
-        default=[2, 3, 4, 5, 6, 7],
-        help="Which experiments to run (default: all). E.g. --exp 2 4",
+        choices=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        default=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        help="Which experiments to run (default: all). "
+             "Exps 8-11 are pooled versions of 4-7 and only run in --folder mode.",
     )
     parser.add_argument(
         "--threshold",
@@ -359,6 +418,7 @@ def main():
         print(f"Folder mode: found {len(json_files)} JSON file(s) in {args.folder}")
         print(f"Experiments to run: {args.exp}\n")
         folder_name = Path(args.folder).name
+        json_paths = [str(f) for f in json_files]
         for json_file in json_files:
             json_path = str(json_file)
             slug = get_dataset_slug(json_path)
@@ -366,6 +426,20 @@ def main():
             print(f"--- Input: {json_path}")
             print(f"    Output base dir: {base_dir}/")
             _run_all_exps(json_path, base_dir, args)
+
+        pooled_exps = [e for e in [8, 9, 10, 11] if e in args.exp]
+        if pooled_exps:
+            print(f"\n--- Pooled experiments {pooled_exps} across {len(json_paths)} components ---")
+            pooled_base = get_unique_base_dir(f"{folder_name}/_pooled")
+            if 8 in args.exp:
+                run_exp8(json_paths, output_dir=f"{pooled_base}/pooled_rate_heatmap", threshold=args.threshold)
+            if 9 in args.exp:
+                run_exp9(json_paths, output_dir=f"{pooled_base}/pooled_rate_layer_bar", threshold=args.threshold)
+            if 10 in args.exp:
+                run_exp10(json_paths, output_dir=f"{pooled_base}/pooled_contrast_heatmap")
+            if 11 in args.exp:
+                run_exp11(json_paths, output_dir=f"{pooled_base}/pooled_contrast_layer_bar")
+            print(f"\nPooled outputs in {pooled_base}/")
     else:
         is_temp = False
         try:

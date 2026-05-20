@@ -52,10 +52,8 @@ def get_biword_scores(path: str = "output/multi_word_output.json"):
                     # scores shape: [num_subtokens, num_valid_rows]
                     # Convert tensor-like objects to lists if needed (json already does it)
                     if len(scores) == 2:
-                        first_vals = scores[0]
-                        second_vals = scores[1]
-                        result[layer_idx][head_idx]["first"].extend(first_vals)
-                        result[layer_idx][head_idx]["second"].extend(second_vals)
+                        result[layer_idx][head_idx]["first"].append(scores[0])
+                        result[layer_idx][head_idx]["second"].append(scores[1])
     return result
 
 def plot_layer_histogram_max_per_head(

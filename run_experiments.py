@@ -7,41 +7,32 @@ Entry point for running all hypothesis experiments against a saved output JSON
 Usage:
     python run_experiments.py                                    # uses default path
     python run_experiments.py output/my_output.json              # single JSON
-    python run_experiments.py output/my_output.json --exp 2 3    # run only exp 2 and 3
+    python run_experiments.py output/my_output.json --exp 2 4    # run only exp 2 and 4
     python run_experiments.py --folder output/500_tokens/        # all JSONs in folder
-    python run_experiments.py --folder output/500_tokens/ --exp 4 6  # subset of exps
+    python run_experiments.py --folder output/500_tokens/ --exp 4 5  # subset of exps
 
 Experiments:
     2 — Box-whisker plots: attention score distributions per subtoken per head
     3 — Key vector polar coordinates: geometric comparison of subtoken key vectors
         (requires re-running the model to extract past_key_values)
-    4 — Hypothesis rate heatmap: 2D grid of (layer x head) hypothesis rates
-    5 — Per-layer hypothesis rate bar chart: mean rate across heads per layer
-    6 — Michelson contrast heatmap: scale-invariant (tok_1 - tok_0) / (tok_1 + tok_0) per head
-    7 — Per-layer Michelson contrast bar chart: mean contrast across heads per layer
+    4 — Hypothesis rate analysis: heatmap + per-layer bar chart
+    5 — Michelson contrast analysis: heatmap + per-layer bar chart
 
     Pooled experiments (--folder mode only, micro-averaged across all components):
-    8  — Pooled hypothesis rate heatmap (mirrors Exp 4)
-    9  — Pooled per-layer hypothesis rate bar chart (mirrors Exp 5)
-    10 — Pooled Michelson contrast heatmap (mirrors Exp 6)
-    11 — Pooled per-layer Michelson contrast bar chart (mirrors Exp 7)
+    6 — Pooled hypothesis rate analysis (heatmap + per-layer bar)
+    7 — Pooled Michelson contrast analysis (heatmap + per-layer bar)
 
 Output folder structure:
-    visuals/<dataset_slug>/
-        boxplots/
-        polar/
-        rate_head_heatmap/
-        rate_layer_bar/
-        contrast_heatmap/
-        contrast_layer_bar/
+    figures/<dataset_slug>/
+        [all output PNGs saved flat, no subfolders]
 
     The dataset_slug is derived from the JSON filename, e.g.:
         output/10_paragraphs_2-token_max_word_output.json
-        → visuals/10_paragraphs_2-token_max_word/
+        → figures/10_paragraphs_2-token_max_word/
 
     In --folder mode each JSON is nested under the input folder name, e.g.:
         output/500_tokens/PubMed_Abstracts_500tokens.json
-        → visuals/500_tokens/PubMed_Abstracts_500tokens/
+        → figures/500_tokens/PubMed_Abstracts_500tokens/
 """
 
 import argparse
@@ -58,6 +49,14 @@ from analysis import (
     pool_layer_hypothesis_rates,
     pool_biword_score_pairs_contrast,
     pool_layer_contrast_means,
+    compute_macro_head_hypothesis_rates,
+    compute_macro_layer_hypothesis_rates,
+    get_macro_biword_score_pairs_contrast,
+    compute_macro_layer_contrast_means,
+    pool_macro_head_hypothesis_rates,
+    pool_macro_layer_hypothesis_rates,
+    pool_macro_biword_score_pairs_contrast,
+    pool_macro_layer_contrast_means,
 )
 from visualizations import (
     plot_diff_contrast_heatmap,
@@ -107,24 +106,46 @@ def resolve_json_path(args) -> tuple[str, bool]:
     return args.json_path, False
 
 
-def get_dataset_slug(json_path: str, npz_path: str = None) -> str:
-    """Derives a clean folder name from the JSON filename or npz folder."""
+def get_dataset_slug(json_path: str, npz_path: str = None, parent_folder_name: str = None) -> str:
+    """
+    Derives a clean folder name from the JSON filename or npz folder.
+    If parent_folder_name is provided, removes token count suffix (e.g., _500tokens)
+    that matches the parent folder name.
+    """
+    import re
     if npz_path:
         return Path(npz_path).name
-    return Path(json_path).stem.replace("_output", "")
+    slug = Path(json_path).stem.replace("_output", "")
+    if parent_folder_name:
+        # Try removing suffix like _500tokens that matches the parent folder's token count
+        # e.g., if parent is "500_tokens", remove "_500tokens" from slug
+        match = re.search(r'_(\d+)tokens?$', slug)
+        if match and match.group(1) in parent_folder_name:
+            slug = slug[:match.start()]
+    return slug
 
 
-def get_unique_base_dir(slug: str) -> str:
+def get_unique_base_dir(slug: str, use_figures_root: bool = True) -> str:
     """
-    Returns visuals/<slug>/ if it doesn't exist, otherwise
-    visuals/<slug> (1)/, visuals/<slug> (2)/, etc.
+    Returns the base directory for outputs. If use_figures_root is True, prepends
+    'figures/' to the slug (for backward compatibility). Otherwise uses slug as-is.
+    Appends (1), (2), etc. if the directory already exists.
     """
-    base = Path("visuals") / slug
+    if use_figures_root:
+        base = Path("figures") / slug
+    else:
+        base = Path(slug)
+
     if not base.exists():
         return str(base)
     counter = 1
     while True:
-        candidate = Path("visuals") / f"{slug} ({counter})"
+        if use_figures_root:
+            candidate = Path("figures") / f"{slug} ({counter})"
+        else:
+            parent = base.parent
+            name = base.name
+            candidate = parent / f"{name} ({counter})"
         if not candidate.exists():
             return str(candidate)
         counter += 1
@@ -208,114 +229,98 @@ def run_exp4(
     threshold: float = DEFAULT_THRESHOLD,
 ) -> None:
     """
-    Experiment 4: Hypothesis rate heatmap.
-    Plots a 2D (layer x head) heatmap of the fraction of row-level attention
-    comparisons where tok_1 > tok_0.
+    Experiment 4: Hypothesis rate analysis (heatmap + per-layer bar chart).
+    Plots both micro-average (all occurrences) and macro-average (equal weight per word type).
     """
-    print("\n=== Experiment 4: Hypothesis Rate Heatmap ===")
-    rates = compute_head_hypothesis_rates(json_path)
-    passing = sum(1 for v in rates.values() if v >= threshold)
-    print(f"Threshold: {threshold:.0%} | "
-          f"{passing}/{len(rates)} heads pass ({100*passing/len(rates):.1f}%)")
-    plot_hypothesis_rate_heatmap(rates, output_dir=output_dir)
+    print("\n=== Experiment 4: Hypothesis Rate Analysis ===")
+
+    rates_head_micro = compute_head_hypothesis_rates(json_path)
+    rates_layer_micro = compute_layer_hypothesis_rates(json_path)
+    passing_micro = sum(1 for v in rates_head_micro.values() if v >= threshold)
+    print(f"Micro — Threshold: {threshold:.0%} | "
+          f"{passing_micro}/{len(rates_head_micro)} heads pass ({100*passing_micro/len(rates_head_micro):.1f}%)")
+    plot_hypothesis_rate_heatmap(rates_head_micro, output_dir=output_dir, suffix="_micro")
+    plot_layer_hypothesis_bar(rates_layer_micro, output_dir=output_dir, threshold=threshold, suffix="_micro")
+
+    rates_head_macro = compute_macro_head_hypothesis_rates(json_path)
+    rates_layer_macro = compute_macro_layer_hypothesis_rates(json_path)
+    passing_macro = sum(1 for v in rates_head_macro.values() if v >= threshold)
+    print(f"Macro — Threshold: {threshold:.0%} | "
+          f"{passing_macro}/{len(rates_head_macro)} heads pass ({100*passing_macro/len(rates_head_macro):.1f}%)")
+    plot_hypothesis_rate_heatmap(rates_head_macro, output_dir=output_dir, suffix="_macro")
+    plot_layer_hypothesis_bar(rates_layer_macro, output_dir=output_dir, threshold=threshold, suffix="_macro")
 
 
 def run_exp5(
     json_path: str,
     output_dir: str,
-    threshold: float = DEFAULT_THRESHOLD,
 ) -> None:
     """
-    Experiment 5: Per-layer hypothesis rate bar chart.
-    Averages the hypothesis rate across all heads for each layer and plots
-    a horizontal bar chart, making it easy to see which layers most consistently
-    attend more to the last subtoken.
+    Experiment 5: Michelson contrast analysis (heatmap + per-layer bar chart).
+    Plots both micro-average (all occurrences) and macro-average (equal weight per word type).
     """
-    print("\n=== Experiment 5: Per-Layer Hypothesis Rate Bar Chart ===")
-    rates = compute_layer_hypothesis_rates(json_path)
-    passing = sum(1 for v in rates.values() if v >= threshold)
-    print(f"Threshold: {threshold:.0%} | "
-          f"{passing}/{len(rates)} layers pass ({100*passing/len(rates):.1f}%)")
-    plot_layer_hypothesis_bar(rates, output_dir=output_dir, threshold=threshold)
+    print("\n=== Experiment 5: Michelson Contrast Analysis ===")
+
+    contrasts_micro = get_biword_score_pairs_contrast(json_path)
+    layer_contrasts_micro = compute_layer_contrast_means(json_path)
+    print(f"Micro — Loaded {sum(len(v) for v in contrasts_micro.values())} contrast values "
+          f"across {len(contrasts_micro)} (layer, head) pairs.")
+    plot_diff_contrast_heatmap(contrasts_micro, output_dir=output_dir, suffix="_micro")
+    plot_layer_contrast_bar(layer_contrasts_micro, output_dir=output_dir, suffix="_micro")
+
+    contrasts_macro = get_macro_biword_score_pairs_contrast(json_path)
+    layer_contrasts_macro = compute_macro_layer_contrast_means(json_path)
+    print(f"Macro — Loaded {sum(len(v) for v in contrasts_macro.values())} contrast values "
+          f"across {len(contrasts_macro)} (layer, head) pairs.")
+    plot_diff_contrast_heatmap(contrasts_macro, output_dir=output_dir, suffix="_macro")
+    plot_layer_contrast_bar(layer_contrasts_macro, output_dir=output_dir, suffix="_macro")
 
 
-def run_exp6(
-    json_path: str,
-    output_dir: str,
-) -> None:
+def run_exp6(json_paths: list, output_dir: str, threshold: float = DEFAULT_THRESHOLD) -> None:
     """
-    Experiment 6: Michelson contrast heatmap.
-    Plots a 2D (layer x head) heatmap of mean (tok_1 - tok_0) / (tok_1 + tok_0),
-    a scale-invariant measure of last-subtoken dominance.
+    Experiment 6: Pooled hypothesis rate analysis (heatmap + per-layer bar chart).
+    Pools raw pairs from all component JSONs before computing micro and macro rates.
     """
-    print("\n=== Experiment 6: Michelson Contrast Heatmap ===")
-    contrasts = get_biword_score_pairs_contrast(json_path)
-    print(f"Loaded {sum(len(v) for v in contrasts.values())} contrast values "
-          f"across {len(contrasts)} (layer, head) pairs.")
-    plot_diff_contrast_heatmap(contrasts, output_dir=output_dir)
+    print("\n=== Experiment 6: Pooled Hypothesis Rate Analysis ===")
+
+    rates_head_micro = pool_head_hypothesis_rates(json_paths)
+    rates_layer_micro = pool_layer_hypothesis_rates(json_paths)
+    passing_micro = sum(1 for v in rates_head_micro.values() if v >= threshold)
+    print(f"Micro — Threshold: {threshold:.0%} | "
+          f"{passing_micro}/{len(rates_head_micro)} heads pass ({100*passing_micro/len(rates_head_micro):.1f}%)")
+    plot_hypothesis_rate_heatmap(rates_head_micro, output_dir=output_dir, suffix="_micro")
+    plot_layer_hypothesis_bar(rates_layer_micro, output_dir=output_dir, threshold=threshold, suffix="_micro")
+
+    rates_head_macro = pool_macro_head_hypothesis_rates(json_paths)
+    rates_layer_macro = pool_macro_layer_hypothesis_rates(json_paths)
+    passing_macro = sum(1 for v in rates_head_macro.values() if v >= threshold)
+    print(f"Macro — Threshold: {threshold:.0%} | "
+          f"{passing_macro}/{len(rates_head_macro)} heads pass ({100*passing_macro/len(rates_head_macro):.1f}%)")
+    plot_hypothesis_rate_heatmap(rates_head_macro, output_dir=output_dir, suffix="_macro")
+    plot_layer_hypothesis_bar(rates_layer_macro, output_dir=output_dir, threshold=threshold, suffix="_macro")
 
 
-def run_exp7(
-    json_path: str,
-    output_dir: str,
-) -> None:
+def run_exp7(json_paths: list, output_dir: str) -> None:
     """
-    Experiment 7: Per-layer Michelson contrast bar chart.
-    Averages the contrast across all heads for each layer and plots a horizontal
-    bar chart, making it easy to see which layers most consistently attend more
-    to the last subtoken on a scale-invariant basis.
+    Experiment 7: Pooled Michelson contrast analysis (heatmap + per-layer bar chart).
+    Pools raw pairs from all component JSONs before computing micro and macro contrast metrics.
     """
-    print("\n=== Experiment 7: Per-Layer Michelson Contrast Bar Chart ===")
-    layer_contrasts = compute_layer_contrast_means(json_path)
-    plot_layer_contrast_bar(layer_contrasts, output_dir=output_dir)
+    print("\n=== Experiment 7: Pooled Michelson Contrast Analysis ===")
 
+    contrasts_micro = pool_biword_score_pairs_contrast(json_paths)
+    layer_contrasts_micro = pool_layer_contrast_means(json_paths)
+    print(f"Micro — Pooled {sum(len(v) for v in contrasts_micro.values())} contrast values "
+          f"across {len(contrasts_micro)} (layer, head) pairs.")
+    plot_diff_contrast_heatmap(contrasts_micro, output_dir=output_dir, suffix="_micro")
+    plot_layer_contrast_bar(layer_contrasts_micro, output_dir=output_dir, suffix="_micro")
 
-def run_exp8(json_paths: list, output_dir: str, threshold: float = DEFAULT_THRESHOLD) -> None:
-    """
-    Experiment 8: Pooled hypothesis rate heatmap (micro-averaged across components).
-    Mirrors Exp 4 but pools raw pairs from all component JSONs before computing.
-    """
-    print("\n=== Experiment 8: Pooled Hypothesis Rate Heatmap ===")
-    rates = pool_head_hypothesis_rates(json_paths)
-    passing = sum(1 for v in rates.values() if v >= threshold)
-    print(f"Threshold: {threshold:.0%} | "
-          f"{passing}/{len(rates)} heads pass ({100*passing/len(rates):.1f}%)")
-    plot_hypothesis_rate_heatmap(rates, output_dir=output_dir)
+    contrasts_macro = pool_macro_biword_score_pairs_contrast(json_paths)
+    layer_contrasts_macro = pool_macro_layer_contrast_means(json_paths)
+    print(f"Macro — Pooled {sum(len(v) for v in contrasts_macro.values())} contrast values "
+          f"across {len(contrasts_macro)} (layer, head) pairs.")
+    plot_diff_contrast_heatmap(contrasts_macro, output_dir=output_dir, suffix="_macro")
+    plot_layer_contrast_bar(layer_contrasts_macro, output_dir=output_dir, suffix="_macro")
 
-
-def run_exp9(json_paths: list, output_dir: str, threshold: float = DEFAULT_THRESHOLD) -> None:
-    """
-    Experiment 9: Pooled per-layer hypothesis rate bar chart (micro-averaged).
-    Mirrors Exp 5 but pools raw pairs from all component JSONs before computing.
-    """
-    print("\n=== Experiment 9: Pooled Per-Layer Hypothesis Rate Bar Chart ===")
-    rates = pool_layer_hypothesis_rates(json_paths)
-    passing = sum(1 for v in rates.values() if v >= threshold)
-    print(f"Threshold: {threshold:.0%} | "
-          f"{passing}/{len(rates)} layers pass ({100*passing/len(rates):.1f}%)")
-    plot_layer_hypothesis_bar(rates, output_dir=output_dir, threshold=threshold)
-
-
-def run_exp10(json_paths: list, output_dir: str) -> None:
-    """
-    Experiment 10: Pooled Michelson contrast heatmap (micro-averaged across components).
-    Mirrors Exp 6 but pools raw pairs from all component JSONs before computing.
-    """
-    print("\n=== Experiment 10: Pooled Michelson Contrast Heatmap ===")
-    contrasts = pool_biword_score_pairs_contrast(json_paths)
-    print(f"Pooled {sum(len(v) for v in contrasts.values())} contrast values "
-          f"across {len(contrasts)} (layer, head) pairs.")
-    plot_diff_contrast_heatmap(contrasts, output_dir=output_dir)
-
-
-def run_exp11(json_paths: list, output_dir: str) -> None:
-    """
-    Experiment 11: Pooled per-layer Michelson contrast bar chart (micro-averaged).
-    Mirrors Exp 7 but pools raw pairs from all component JSONs before computing.
-    """
-    print("\n=== Experiment 11: Pooled Per-Layer Michelson Contrast Bar Chart ===")
-    layer_contrasts = pool_layer_contrast_means(json_paths)
-    plot_layer_contrast_bar(layer_contrasts, output_dir=output_dir)
 
 
 def _run_all_exps(json_path: str, base_dir: str, args) -> None:
@@ -323,7 +328,7 @@ def _run_all_exps(json_path: str, base_dir: str, args) -> None:
     if 2 in args.exp:
         run_exp2(
             json_path,
-            output_dir=f"{base_dir}/boxplots",
+            output_dir=base_dir,
             nrows=args.nrows,
             ncols=args.ncols,
         )
@@ -331,7 +336,7 @@ def _run_all_exps(json_path: str, base_dir: str, args) -> None:
     if 3 in args.exp:
         run_exp3(
             json_path,
-            output_dir=f"{base_dir}/polar",
+            output_dir=base_dir,
             nrows=args.nrows,
             ncols=args.ncols,
         )
@@ -339,27 +344,14 @@ def _run_all_exps(json_path: str, base_dir: str, args) -> None:
     if 4 in args.exp:
         run_exp4(
             json_path,
-            output_dir=f"{base_dir}/rate_head_heatmap",
+            output_dir=base_dir,
             threshold=args.threshold,
         )
 
     if 5 in args.exp:
         run_exp5(
             json_path,
-            output_dir=f"{base_dir}/rate_layer_bar",
-            threshold=args.threshold,
-        )
-
-    if 6 in args.exp:
-        run_exp6(
-            json_path,
-            output_dir=f"{base_dir}/contrast_heatmap",
-        )
-
-    if 7 in args.exp:
-        run_exp7(
-            json_path,
-            output_dir=f"{base_dir}/contrast_layer_bar",
+            output_dir=base_dir,
         )
 
     print(f"\nAll selected experiments complete. Outputs in {base_dir}/")
@@ -390,16 +382,16 @@ def main():
         "--exp",
         nargs="+",
         type=int,
-        choices=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
-        default=[2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+        choices=[2, 3, 4, 5, 6, 7],
+        default=[2, 3, 4, 5, 6, 7],
         help="Which experiments to run (default: all). "
-             "Exps 8-11 are pooled versions of 4-7 and only run in --folder mode.",
+             "Exps 6-7 are pooled versions and only run in --folder mode.",
     )
     parser.add_argument(
         "--threshold",
         type=float,
         default=DEFAULT_THRESHOLD,
-        help=f"Hypothesis rate threshold for Exp 4 heatmap (default: {DEFAULT_THRESHOLD})",
+        help=f"Hypothesis rate threshold for Exp 4 and 6 (default: {DEFAULT_THRESHOLD})",
     )
     parser.add_argument(
         "--nrows", type=int, default=8, help="Subplot rows for plot grids (default: 8)"
@@ -427,25 +419,22 @@ def main():
             print(f"    Output base dir: {base_dir}/")
             _run_all_exps(json_path, base_dir, args)
 
-        pooled_exps = [e for e in [8, 9, 10, 11] if e in args.exp]
+        pooled_exps = [e for e in [6, 7] if e in args.exp]
         if pooled_exps:
             print(f"\n--- Pooled experiments {pooled_exps} across {len(json_paths)} components ---")
             pooled_base = get_unique_base_dir(f"{folder_name}/_pooled")
-            if 8 in args.exp:
-                run_exp8(json_paths, output_dir=f"{pooled_base}/pooled_rate_heatmap", threshold=args.threshold)
-            if 9 in args.exp:
-                run_exp9(json_paths, output_dir=f"{pooled_base}/pooled_rate_layer_bar", threshold=args.threshold)
-            if 10 in args.exp:
-                run_exp10(json_paths, output_dir=f"{pooled_base}/pooled_contrast_heatmap")
-            if 11 in args.exp:
-                run_exp11(json_paths, output_dir=f"{pooled_base}/pooled_contrast_layer_bar")
+            if 6 in args.exp:
+                run_exp6(json_paths, output_dir=pooled_base, threshold=args.threshold)
+            if 7 in args.exp:
+                run_exp7(json_paths, output_dir=pooled_base)
             print(f"\nPooled outputs in {pooled_base}/")
     else:
         is_temp = False
         try:
             json_path, is_temp = resolve_json_path(args)
-            slug = get_dataset_slug(json_path, npz_path=args.npz)
-            base_dir = get_unique_base_dir(slug)
+            parent_folder = Path(json_path).parent.name
+            slug = get_dataset_slug(json_path, npz_path=args.npz, parent_folder_name=parent_folder)
+            base_dir = get_unique_base_dir(f"{parent_folder}/{slug}")
 
             source_label = args.npz if args.npz else json_path
             print(f"Input:               {source_label}")

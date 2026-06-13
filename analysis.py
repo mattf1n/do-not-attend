@@ -679,6 +679,172 @@ def pool_layer_contrast_means(json_paths: list) -> dict:
     return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
 
 
+# ─────────────────────────────────────────────────────────────────────────────
+# MACRO-AVERAGED FUNCTIONS — equal weight per unique word type, regardless of count
+# ─────────────────────────────────────────────────────────────────────────────
+
+def get_macro_biword_score_pairs(path: str) -> dict:
+    """
+    Macro-average variant of get_biword_score_pairs.
+    Returns one averaged (s0, s1) pair per unique word type per (layer, head).
+    Every word type contributes equally regardless of occurrence count.
+
+    Returns:
+        { (layer_idx, head_idx): [(s0_word1, s1_word1), (s0_word2, s1_word2), ...] }
+        where each entry is one word type's averaged pair.
+    """
+    result = defaultdict(list)
+    mw_map = load_json(path)["main_data"]
+    for word, word_data in mw_map.items():
+        word_pairs = defaultdict(list)
+        for occurrence in word_data["occurrences"]:
+            for layer_idx, layer in enumerate(occurrence["attentions"]["layers"]):
+                for head_idx, scores in enumerate(layer["heads"]):
+                    if len(scores) == 2:
+                        word_pairs[(layer_idx, head_idx)].append((scores[0], scores[1]))
+        for key, pairs in word_pairs.items():
+            s0 = sum(p[0] for p in pairs) / len(pairs)
+            s1 = sum(p[1] for p in pairs) / len(pairs)
+            result[key].append((s0, s1))
+    return dict(result)
+
+
+def get_macro_biword_score_pairs_contrast(path: str) -> dict:
+    """
+    Macro-average Michelson contrast: applies (s1 - s0) / (s1 + s0) to macro pairs.
+
+    Returns:
+        { (layer_idx, head_idx): [contrast, ...] }  — one contrast per word type
+    """
+    pairs = get_macro_biword_score_pairs(path)
+    result = {}
+    for key, vals in pairs.items():
+        contrasts = []
+        for s0, s1 in vals:
+            denom = s0 + s1
+            contrasts.append((s1 - s0) / denom if denom != 0 else 0.0)
+        result[key] = contrasts
+    return result
+
+
+def compute_macro_head_hypothesis_rates(path: str) -> dict:
+    """
+    Macro-average hypothesis rates: fraction of word types where s1 > s0.
+
+    Returns:
+        { (layer_idx, head_idx): float }  — values in [0, 1]
+    """
+    pairs = get_macro_biword_score_pairs(path)
+    return {
+        key: sum(1 for s0, s1 in vals if s1 > s0) / len(vals)
+        for key, vals in pairs.items() if vals
+    }
+
+
+def compute_macro_layer_hypothesis_rates(path: str) -> dict:
+    """
+    Macro-average per-layer hypothesis rates: mean of per-head rates.
+
+    Returns:
+        { layer_idx: float }  — values in [0, 1]
+    """
+    head_rates = compute_macro_head_hypothesis_rates(path)
+    layer_vals = defaultdict(list)
+    for (layer, _), rate in head_rates.items():
+        layer_vals[layer].append(rate)
+    return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
+def compute_macro_layer_contrast_means(path: str) -> dict:
+    """
+    Macro-average per-layer contrast: mean of per-head contrast means.
+
+    Returns:
+        { layer_idx: float }  — values in [-1, 1]
+    """
+    contrasts = get_macro_biword_score_pairs_contrast(path)
+    layer_vals = defaultdict(list)
+    for (layer, _), vals in contrasts.items():
+        if vals:
+            layer_vals[layer].append(sum(vals) / len(vals))
+    return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
+def pool_macro_biword_score_pairs(json_paths: list) -> dict:
+    """
+    Pools macro-averaged pairs from multiple JSON files.
+
+    Returns:
+        { (layer_idx, head_idx): [(s0, s1), ...] }  — word types per component
+    """
+    merged = defaultdict(list)
+    for path in json_paths:
+        for key, pairs in get_macro_biword_score_pairs(path).items():
+            merged[key].extend(pairs)
+    return dict(merged)
+
+
+def pool_macro_biword_score_pairs_contrast(json_paths: list) -> dict:
+    """
+    Pools macro pairs and computes Michelson contrast.
+
+    Returns:
+        { (layer_idx, head_idx): [contrast, ...] }
+    """
+    pooled = pool_macro_biword_score_pairs(json_paths)
+    result = {}
+    for key, vals in pooled.items():
+        contrasts = []
+        for s0, s1 in vals:
+            denom = s0 + s1
+            contrasts.append((s1 - s0) / denom if denom != 0 else 0.0)
+        result[key] = contrasts
+    return result
+
+
+def pool_macro_head_hypothesis_rates(json_paths: list) -> dict:
+    """
+    Pools macro pairs and computes per-head hypothesis rates.
+
+    Returns:
+        { (layer_idx, head_idx): float }  — values in [0, 1]
+    """
+    pooled = pool_macro_biword_score_pairs(json_paths)
+    return {
+        key: sum(1 for s0, s1 in vals if s1 > s0) / len(vals)
+        for key, vals in pooled.items() if vals
+    }
+
+
+def pool_macro_layer_hypothesis_rates(json_paths: list) -> dict:
+    """
+    Pools macro pairs and computes per-layer mean hypothesis rates.
+
+    Returns:
+        { layer_idx: float }  — values in [0, 1]
+    """
+    head_rates = pool_macro_head_hypothesis_rates(json_paths)
+    layer_vals = defaultdict(list)
+    for (layer, _), rate in head_rates.items():
+        layer_vals[layer].append(rate)
+    return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
+def pool_macro_layer_contrast_means(json_paths: list) -> dict:
+    """
+    Pools macro pairs and computes per-layer mean Michelson contrast.
+
+    Returns:
+        { layer_idx: float }  — values in [-1, 1]
+    """
+    contrasts = pool_macro_biword_score_pairs_contrast(json_paths)
+    layer_vals = defaultdict(list)
+    for (layer, _), vals in contrasts.items():
+        if vals:
+            layer_vals[layer].append(sum(vals) / len(vals))
+    return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
 def summarize_hypothesis_coverage(
     rates: dict,
     threshold: float = 0.5,

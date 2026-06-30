@@ -2,7 +2,7 @@ import math
 import torch
 import torch.nn.functional as F
 from collections import defaultdict
-from utils import load_json
+from utils import load_json, classify_word, WORD_CATEGORIES
 
 def aggregate_multi_token_word_attentions(attentions, multi_word_map):
     """
@@ -481,38 +481,49 @@ def get_attentions_head_streaming(text, model, tokenizer, multi_word_map):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def get_biword_score_pairs(path: str) -> dict:
+def get_biword_score_pairs(path: str, word: str = None) -> dict:
     """
     Returns { (layer_idx, head_idx): [(s0_val, s1_val), ...] } for every
     bi-token word occurrence in the output JSON.
 
     Each (s0, s1) pair is the mean attention score across all attending rows
     for that occurrence — one pair per occurrence, not one per attending row.
+
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to occurrences of this single word only
     """
     result = defaultdict(list)
     mw_map = load_json(path)["main_data"]
-    for word in mw_map:
-        for occurrence in mw_map[word]["occurrences"]:
+    words = [word] if word is not None else mw_map.keys()
+    for w in words:
+        if w not in mw_map:
+            continue
+        for occurrence in mw_map[w]["occurrences"]:
             for layer_idx, layer in enumerate(occurrence["attentions"]["layers"]):
                 for head_idx, scores in enumerate(layer["heads"]):
                     if len(scores) == 2:
-                        # scores[0] and scores[1] are per-occurrence averages, not row vectors
                         result[(layer_idx, head_idx)].append((scores[0], scores[1]))
     return dict(result)
 
 
 def get_biword_score_pairs_diff(
     path: str = "output/multi_word_output.json",
+    word: str = None,
 ) -> dict:
     """
     For each bi-token word occurrence, computes mean(tok_1) - mean(tok_0),
     where each score is the mean attention across all attending rows for that occurrence.
 
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to occurrences of this single word only
+
     Returns:
         { (layer_idx, head_idx): [diff, ...] }
         where each diff is one value per occurrence (positive = tok_1 heavier, negative = tok_0 heavier).
     """
-    pairs = get_biword_score_pairs(path)
+    pairs = get_biword_score_pairs(path, word=word)
     return {
         key: [s1 - s0 for s0, s1 in vals]
         for key, vals in pairs.items()
@@ -521,6 +532,7 @@ def get_biword_score_pairs_diff(
 
 def get_biword_score_pairs_contrast(
     path: str = "output/multi_word_output.json",
+    word: str = None,
 ) -> dict:
     """
     For each bi-token word occurrence, computes the Michelson contrast using
@@ -531,11 +543,15 @@ def get_biword_score_pairs_contrast(
 
     Edge case: when tok_1 + tok_0 == 0, contrast is defined as 0.
 
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to occurrences of this single word only
+
     Returns:
         { (layer_idx, head_idx): [contrast, ...] }
         where each contrast is one value per occurrence, in [-1, 1].
     """
-    pairs = get_biword_score_pairs(path)
+    pairs = get_biword_score_pairs(path, word=word)
     result = {}
     for key, vals in pairs.items():
         contrasts = []
@@ -548,15 +564,20 @@ def get_biword_score_pairs_contrast(
 
 def compute_layer_contrast_means(
     path: str = "output/multi_word_output.json",
+    word: str = None,
 ) -> dict:
     """
     For each layer, computes the mean Michelson contrast across all heads.
+
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to occurrences of this single word only
 
     Returns:
         { layer_idx: float }  — values in [-1, 1]
     """
     from collections import defaultdict
-    contrasts = get_biword_score_pairs_contrast(path)
+    contrasts = get_biword_score_pairs_contrast(path, word=word)
     layer_vals = defaultdict(list)
     for (layer, _), vals in contrasts.items():
         if vals:
@@ -566,15 +587,20 @@ def compute_layer_contrast_means(
 
 def compute_head_hypothesis_rates(
     path: str = "output/multi_word_output.json",
+    word: str = None,
 ) -> dict:
     """
     For each (layer, head), computes the fraction of occurrences where the
     last subtoken's mean attention is strictly higher than the first (diff > 0).
 
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to occurrences of this single word only
+
     Returns:
         { (layer_idx, head_idx): float }  — values in [0, 1]
     """
-    diffs = get_biword_score_pairs_diff(path)
+    diffs = get_biword_score_pairs_diff(path, word=word)
     return {
         #NOTE: v = s1 - s0; therefore v > 0 means s1 > s0
         head: sum(1 for v in vals if v > 0) / len(vals)
@@ -584,15 +610,20 @@ def compute_head_hypothesis_rates(
 
 def compute_layer_hypothesis_rates(
     path: str = "output/multi_word_output.json",
+    word: str = None,
 ) -> dict:
     """
     For each layer, computes the mean hypothesis rate across all heads.
+
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to occurrences of this single word only
 
     Returns:
         { layer_idx: float }  — values in [0, 1]
     """
     from collections import defaultdict
-    head_rates = compute_head_hypothesis_rates(path)
+    head_rates = compute_head_hypothesis_rates(path, word=word)
     layer_vals = defaultdict(list)
     for (layer, _), rate in head_rates.items():
         layer_vals[layer].append(rate)
@@ -683,11 +714,15 @@ def pool_layer_contrast_means(json_paths: list) -> dict:
 # MACRO-AVERAGED FUNCTIONS — equal weight per unique word type, regardless of count
 # ─────────────────────────────────────────────────────────────────────────────
 
-def get_macro_biword_score_pairs(path: str) -> dict:
+def get_macro_biword_score_pairs(path: str, word: str = None) -> dict:
     """
     Macro-average variant of get_biword_score_pairs.
     Returns one averaged (s0, s1) pair per unique word type per (layer, head).
     Every word type contributes equally regardless of occurrence count.
+
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to this single word only
 
     Returns:
         { (layer_idx, head_idx): [(s0_word1, s1_word1), (s0_word2, s1_word2), ...] }
@@ -695,7 +730,11 @@ def get_macro_biword_score_pairs(path: str) -> dict:
     """
     result = defaultdict(list)
     mw_map = load_json(path)["main_data"]
-    for word, word_data in mw_map.items():
+    words_to_process = [word] if word is not None else mw_map.keys()
+    for w in words_to_process:
+        if w not in mw_map:
+            continue
+        word_data = mw_map[w]
         word_pairs = defaultdict(list)
         for occurrence in word_data["occurrences"]:
             for layer_idx, layer in enumerate(occurrence["attentions"]["layers"]):
@@ -709,14 +748,18 @@ def get_macro_biword_score_pairs(path: str) -> dict:
     return dict(result)
 
 
-def get_macro_biword_score_pairs_contrast(path: str) -> dict:
+def get_macro_biword_score_pairs_contrast(path: str, word: str = None) -> dict:
     """
     Macro-average Michelson contrast: applies (s1 - s0) / (s1 + s0) to macro pairs.
+
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to this single word only
 
     Returns:
         { (layer_idx, head_idx): [contrast, ...] }  — one contrast per word type
     """
-    pairs = get_macro_biword_score_pairs(path)
+    pairs = get_macro_biword_score_pairs(path, word=word)
     result = {}
     for key, vals in pairs.items():
         contrasts = []
@@ -727,42 +770,54 @@ def get_macro_biword_score_pairs_contrast(path: str) -> dict:
     return result
 
 
-def compute_macro_head_hypothesis_rates(path: str) -> dict:
+def compute_macro_head_hypothesis_rates(path: str, word: str = None) -> dict:
     """
     Macro-average hypothesis rates: fraction of word types where s1 > s0.
+
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to this single word only
 
     Returns:
         { (layer_idx, head_idx): float }  — values in [0, 1]
     """
-    pairs = get_macro_biword_score_pairs(path)
+    pairs = get_macro_biword_score_pairs(path, word=word)
     return {
         key: sum(1 for s0, s1 in vals if s1 > s0) / len(vals)
         for key, vals in pairs.items() if vals
     }
 
 
-def compute_macro_layer_hypothesis_rates(path: str) -> dict:
+def compute_macro_layer_hypothesis_rates(path: str, word: str = None) -> dict:
     """
     Macro-average per-layer hypothesis rates: mean of per-head rates.
+
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to this single word only
 
     Returns:
         { layer_idx: float }  — values in [0, 1]
     """
-    head_rates = compute_macro_head_hypothesis_rates(path)
+    head_rates = compute_macro_head_hypothesis_rates(path, word=word)
     layer_vals = defaultdict(list)
     for (layer, _), rate in head_rates.items():
         layer_vals[layer].append(rate)
     return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
 
 
-def compute_macro_layer_contrast_means(path: str) -> dict:
+def compute_macro_layer_contrast_means(path: str, word: str = None) -> dict:
     """
     Macro-average per-layer contrast: mean of per-head contrast means.
+
+    Args:
+        path: path to output JSON
+        word: if provided, restrict to this single word only
 
     Returns:
         { layer_idx: float }  — values in [-1, 1]
     """
-    contrasts = get_macro_biword_score_pairs_contrast(path)
+    contrasts = get_macro_biword_score_pairs_contrast(path, word=word)
     layer_vals = defaultdict(list)
     for (layer, _), vals in contrasts.items():
         if vals:
@@ -843,6 +898,98 @@ def pool_macro_layer_contrast_means(json_paths: list) -> dict:
         if vals:
             layer_vals[layer].append(sum(vals) / len(vals))
     return {layer: sum(vals) / len(vals) for layer, vals in sorted(layer_vals.items())}
+
+
+def get_words_by_filter(path: str, filter_name: str) -> list:
+    """
+    Returns all words in the JSON whose category matches filter_name.
+
+    Valid filter names: newlines, space_numbers, space_words, space_symbols,
+                        words, numbers, symbols, other
+
+    Args:
+        path:        path to output JSON (must have a "main_data" key)
+        filter_name: category name from classify_word()
+
+    Returns:
+        list of word strings matching the filter
+    """
+    # Create a set of all valid word categories (from WORD_CATEGORIES), plus "other"
+    valid = set(WORD_CATEGORIES.keys()) | {"other"}
+    if filter_name not in valid:
+        raise ValueError(
+            f"Unknown filter {repr(filter_name)}. Valid options: {sorted(valid)}"
+        )
+    mw_map = load_json(path)["main_data"]
+    return [w for w in mw_map if classify_word(w) == filter_name]
+
+
+def generate_filter_stats(path: str) -> str:
+    """
+    Generates a formatted stats table showing word and occurrence counts
+    per filter category, with 'all' as a summary row at the bottom.
+
+    Args:
+        path: path to output JSON (must have "main_data", "component", "num_tokens")
+
+    Returns:
+        formatted string ready to write to a file or print
+    """
+    data = load_json(path)
+    mw_map = data["main_data"]
+    component = data.get("component", path)
+    num_tokens = data.get("num_tokens", "?")
+
+    categories = list(WORD_CATEGORIES.keys()) + ["other"]
+    rows = []
+    for cat in categories:
+        cat_words = [w for w in mw_map if classify_word(w) == cat]
+        n_words = len(cat_words)
+        n_occ = sum(len(mw_map[w]["occurrences"]) for w in cat_words)
+        rows.append((cat, n_words, n_occ))
+
+    all_words = len(mw_map)
+    all_occ = sum(len(info["occurrences"]) for info in mw_map.values())
+
+    col_cat = max(len("Category"), max(len(r[0]) for r in rows))
+    col_w = max(len("Words"), len(str(all_words)))
+    col_o = max(len("Occurrences"), len(str(all_occ)))
+    sep = f"{'-' * col_cat}  {'-' * col_w}  {'-' * col_o}"
+
+    lines = [
+        f"Component:   {component}",
+        f"Token count: {num_tokens}",
+        "",
+        f"{'Category':<{col_cat}}  {'Words':>{col_w}}  {'Occurrences':>{col_o}}",
+        sep,
+    ]
+    for cat, n_words, n_occ in rows:
+        lines.append(f"{cat:<{col_cat}}  {n_words:>{col_w}}  {n_occ:>{col_o}}")
+    lines.append(sep)
+    lines.append(f"{'all':<{col_cat}}  {all_words:>{col_w}}  {all_occ:>{col_o}}")
+
+    return "\n".join(lines) + "\n"
+
+
+def rank_words_by_occurrence(path: str, top_n: int = None) -> list:
+    """
+    Returns a ranked list of (word, occurrence_count) tuples from an output JSON,
+    sorted from most to least frequent.
+
+    Args:
+        path:  path to an output JSON file (must have a "main_data" key)
+        top_n: if provided, return only the top N words; otherwise return all
+
+    Returns:
+        list of (word, count) tuples, descending by count
+    """
+    mw_map = load_json(path)["main_data"]
+    ranked = sorted(
+        ((word, len(info["occurrences"])) for word, info in mw_map.items()),
+        key=lambda x: x[1],
+        reverse=True,
+    )
+    return ranked[:top_n] if top_n is not None else ranked
 
 
 def summarize_hypothesis_coverage(

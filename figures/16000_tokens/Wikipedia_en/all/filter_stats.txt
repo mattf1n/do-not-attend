@@ -1,0 +1,15 @@
+Component:   Wikipedia (en)
+Token count: 16000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           1            1
+space_numbers     58          119
+space_words      378          562
+space_symbols      1            2
+words            147          255
+numbers           61          101
+symbols            1            1
+other              4            5
+-------------  -----  -----------
+all              651         1046

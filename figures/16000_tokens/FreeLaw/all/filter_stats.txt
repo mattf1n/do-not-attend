@@ -1,0 +1,15 @@
+Component:   FreeLaw
+Token count: 16000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines          48          660
+space_numbers    199          443
+space_words      137          307
+space_symbols      6           19
+words             58          109
+numbers            9           12
+symbols            6            6
+other              0            0
+-------------  -----  -----------
+all              463         1556

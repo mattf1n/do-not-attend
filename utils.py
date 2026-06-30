@@ -1,3 +1,40 @@
+import re as _re
+
+WORD_CATEGORIES = {
+    "newlines":      _re.compile(r'^\n'),
+    "space_numbers": _re.compile(r'^ \d+$'),
+    "space_words":   _re.compile(r'^ [a-zA-Z]+$'),
+    "space_symbols": _re.compile(r'^ [^a-zA-Z\d]+$'),
+    "words":         _re.compile(r'^[a-zA-Z]+$'),
+    "numbers":       _re.compile(r'^\d+$'),
+    "symbols":       _re.compile(r'^[^a-zA-Z\d\s]+$'),
+}
+
+
+def classify_word(word: str) -> str:
+    """
+    Classifies a word string into one of the predefined categories based on its
+    character composition. Categories are checked in order; the first match wins.
+
+    Categories:
+        newlines      — starts with \\n
+        space_numbers — leading space + digits only
+        space_words   — leading space + alpha only
+        space_symbols — leading space + non-alphanumeric chars
+        words         — alpha only, no leading space
+        numbers       — digits only, no leading space
+        symbols       — non-alphanumeric, non-whitespace only
+        other         — anything that doesn't match the above
+
+    Returns:
+        str: category name
+    """
+    for category, pattern in WORD_CATEGORIES.items():
+        if pattern.match(word):
+            return category
+    return "other"
+
+
 def load_json(json_path):
     """
     Loads a JSON file and returns its contents as a Python dictionary.

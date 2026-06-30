@@ -1,0 +1,15 @@
+Component:   PubMed Abstracts
+Token count: 16000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           0            0
+space_numbers     67          254
+space_words      401          745
+space_symbols      2            5
+words            133          167
+numbers            8            9
+symbols            1            1
+other              1            4
+-------------  -----  -----------
+all              613         1185

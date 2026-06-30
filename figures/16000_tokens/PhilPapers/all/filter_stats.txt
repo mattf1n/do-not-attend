@@ -1,0 +1,15 @@
+Component:   PhilPapers
+Token count: 16000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           0            0
+space_numbers    114          567
+space_words      187          324
+space_symbols      8           17
+words             32           57
+numbers          186          199
+symbols            2            2
+other              0            0
+-------------  -----  -----------
+all              529         1166

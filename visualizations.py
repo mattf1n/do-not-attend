@@ -234,6 +234,7 @@ def plot_hypothesis_rate_heatmap(
     rates: dict,
     output_dir: str = "visuals/experiments/heatmap",
     suffix: str = "",
+    context: str = "",
 ) -> None:
     """
     Plots a 2D heatmap of hypothesis rates (last-subtoken dominance) indexed
@@ -245,6 +246,7 @@ def plot_hypothesis_rate_heatmap(
                     { (layer_idx, head_idx): float in [0, 1] }
         output_dir: directory to save the PNG into
         suffix:     string appended before .png (e.g., "_micro" or "_macro")
+        context:    descriptive string shown in the title (e.g. component, word, token count)
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -281,7 +283,10 @@ def plot_hypothesis_rate_heatmap(
     ax.set_yticks(range(num_layers))
     ax.set_xticklabels(range(num_heads), fontsize=7)
     ax.set_yticklabels(range(num_layers), fontsize=7)
-    ax.set_title("Hypothesis rate — last subtoken dominance (tok_1 > tok_0)", fontsize=12)
+    title = "Hypothesis rate — last subtoken dominance (tok_1 > tok_0)"
+    if context:
+        title = f"{title}\n{context}"
+    ax.set_title(title, fontsize=12)
 
     plt.tight_layout()
     out_path = os.path.join(output_dir, f"hypothesis_rate_heatmap{suffix}.png")
@@ -295,6 +300,7 @@ def plot_layer_hypothesis_bar(
     output_dir: str = "visuals/experiments/heatmap",
     threshold: float = 0.5,
     suffix: str = "",
+    context: str = "",
 ) -> None:
     """
     Plots a horizontal bar chart of mean hypothesis rates per layer.
@@ -307,6 +313,7 @@ def plot_layer_hypothesis_bar(
         output_dir:  directory to save the PNG into
         threshold:   reference line position (default 0.5)
         suffix:      string appended before .png (e.g., "_micro" or "_macro")
+        context:     descriptive string shown in the title (e.g. component, word, token count)
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -335,7 +342,10 @@ def plot_layer_hypothesis_bar(
     ax.set_yticklabels([f"Layer {l}" for l in layers], fontsize=8)
     ax.invert_yaxis()
     ax.legend(fontsize=8)
-    ax.set_title("Mean hypothesis rate per layer", fontsize=12)
+    title = "Mean hypothesis rate per layer"
+    if context:
+        title = f"{title}\n{context}"
+    ax.set_title(title, fontsize=12)
 
     plt.tight_layout()
     out_path = os.path.join(output_dir, f"layer_hypothesis_rate_bar{suffix}.png")
@@ -409,6 +419,7 @@ def plot_diff_contrast_heatmap(
     contrasts: dict,
     output_dir: str = "visuals/experiments/exp_contrast",
     suffix: str = "",
+    context: str = "",
 ) -> None:
     """
     Plots a 2D heatmap of mean Michelson contrast per occurrence —
@@ -426,6 +437,7 @@ def plot_diff_contrast_heatmap(
                     { (layer_idx, head_idx): [contrast, ...] }
         output_dir: directory to save the PNG into
         suffix:     string appended before .png (e.g., "_micro" or "_macro")
+        context:    descriptive string shown in the title (e.g. component, word, token count)
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -464,7 +476,10 @@ def plot_diff_contrast_heatmap(
     ax.set_yticks(range(num_layers))
     ax.set_xticklabels(range(num_heads), fontsize=7)
     ax.set_yticklabels(range(num_layers), fontsize=7)
-    ax.set_title("Mean Michelson contrast per head  —  (tok_1 − tok_0) / (tok_1 + tok_0)", fontsize=12)
+    title = "Mean Michelson contrast per head  —  (tok_1 − tok_0) / (tok_1 + tok_0)"
+    if context:
+        title = f"{title}\n{context}"
+    ax.set_title(title, fontsize=12)
 
     plt.tight_layout()
     out_path = os.path.join(output_dir, f"diff_contrast_heatmap{suffix}.png")
@@ -477,6 +492,7 @@ def plot_layer_contrast_bar(
     layer_contrasts: dict,
     output_dir: str = "visuals/experiments/exp_contrast",
     suffix: str = "",
+    context: str = "",
 ) -> None:
     """
     Plots a horizontal bar chart of mean Michelson contrast per layer.
@@ -489,6 +505,7 @@ def plot_layer_contrast_bar(
                          { layer_idx: float in [-1, 1] }
         output_dir:      directory to save the PNG into
         suffix:          string appended before .png (e.g., "_micro" or "_macro")
+        context:         descriptive string shown in the title (e.g. component, word, token count)
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -516,7 +533,10 @@ def plot_layer_contrast_bar(
     ax.set_yticklabels([f"Layer {l}" for l in layers], fontsize=8)
     ax.invert_yaxis()
     ax.legend(fontsize=8)
-    ax.set_title("Mean Michelson contrast per layer", fontsize=12)
+    title = "Mean Michelson contrast per layer"
+    if context:
+        title = f"{title}\n{context}"
+    ax.set_title(title, fontsize=12)
 
     plt.tight_layout()
     out_path = os.path.join(output_dir, f"layer_contrast_bar{suffix}.png")

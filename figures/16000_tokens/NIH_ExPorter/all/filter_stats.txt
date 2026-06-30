@@ -1,0 +1,15 @@
+Component:   NIH ExPorter
+Token count: 16000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           0            0
+space_numbers     29          130
+space_words      386          762
+space_symbols      0            0
+words            102          150
+numbers            5            5
+symbols            0            0
+other              0            0
+-------------  -----  -----------
+all              522         1047

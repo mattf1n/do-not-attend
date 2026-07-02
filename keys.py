@@ -1,3 +1,20 @@
+"""
+keys.py — Key vector extraction and analysis for multi-token words.
+
+Main workflow:
+    1. collect_key_vectors   — run inference, extract raw k0/k1 vectors per word per (layer, head)
+    2. save_key_vectors      — persist the collected dict to disk as a .pt file
+    3. load_key_vectors      — reload from disk (no model needed)
+    4. micro/macro_average   — reduce to one (head_dim,) vector per (layer, head) for analysis
+    5. compute_polar_per_head — convert averaged k0/k1 pairs to polar coordinates
+
+Collected dict schema (word-keyed for easy filtering):
+    { word: { (layer_idx, head_idx): {"k0": [occ1, occ2, ...],
+                                      "k1": [occ1, occ2, ...]} } }
+    k0 = key vector for the first subtoken of the word
+    k1 = key vector for the second subtoken of the word
+    Each occ is a (head_dim,) float32 tensor.
+"""
 import torch
 import numpy as np
 import matplotlib
@@ -66,15 +83,14 @@ def plot_polar_point(r, theta, save_path="plot.png"):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
-def extract_key_vectors(
+def collect_key_vectors(
     text: str,
     model,
     tokenizer,
     multi_token_words_map: dict,
 ) -> dict:
     """
-    Runs inference with use_cache=True to get past_key_values, then extracts
-    key vectors for every bi-token word occurrence per (layer, head).
+    Runs inference and collects raw key vectors grouped by word type.
 
     Args:
         text:                  raw input string
@@ -83,44 +99,152 @@ def extract_key_vectors(
         multi_token_words_map: output of tokenization.get_multi_token_words
 
     Returns:
-        { (layer_idx, head_idx): {"k0": [tensor, ...], "k1": [tensor, ...]} }
-        Each list contains one head_dim-length tensor per bi-token occurrence.
+        { word: { (layer_idx, head_idx): {"k0": [occ1, occ2, ...],
+                                          "k1": [occ1, occ2, ...]} } }
+        Keyed by word string for easy filtering. Each occ is a (head_dim,) tensor.
     """
     device = next(model.parameters()).device
     inputs = tokenizer(text, return_tensors="pt")
     inputs = {k: v.to(device) for k, v in inputs.items()}
 
+    # use_cache=True makes HuggingFace store key/value vectors in past_key_values
+    # without it there's no way to access the KV cache after the forward pass
     with torch.no_grad():
         outputs = model(**inputs, use_cache=True, return_dict=True)
 
     pkv = outputs.past_key_values
     num_layers = len(pkv)
 
-    accum = defaultdict(lambda: {"k0": [], "k1": []})
+    # word → {(layer, head): {"k0": [occ tensors], "k1": [occ tensors]}}
+    collected = {}
 
     for word, info in multi_token_words_map.items():
+        word_data = defaultdict(lambda: {"k0": [], "k1": []})
+
         for occ in info["occurrences"]:
             token_indices = occ["token_indices"]
             if len(token_indices) != 2:
                 continue
             for layer_idx in range(num_layers):
                 # shape: (batch, num_kv_heads, seq_len, head_dim)
+                # num_kv_heads may be < num_query_heads due to GQA (e.g. 8 vs 32 for OLMo-3-7B)
                 layer_keys = pkv.layers[layer_idx].keys
                 num_heads = layer_keys.shape[1]
                 for head_idx in range(num_heads):
+                    # index [0, head, token_pos, :] → (head_dim,) key vector for this token
+                    # .float() upcasts from model dtype (likely bfloat16) to float32 for safe arithmetic
                     k0 = layer_keys[0, head_idx, token_indices[0], :].float().cpu()
                     k1 = layer_keys[0, head_idx, token_indices[1], :].float().cpu()
-                    accum[(layer_idx, head_idx)]["k0"].append(k0)
-                    accum[(layer_idx, head_idx)]["k1"].append(k1)
+                    word_data[(layer_idx, head_idx)]["k0"].append(k0)
+                    word_data[(layer_idx, head_idx)]["k1"].append(k1)
 
-    # Average all collected k0 and k1 vectors per (layer, head).
+        if word_data:
+            collected[word] = dict(word_data)
+
+    return collected
+
+
+def micro_average_key_vectors(collected: dict) -> dict:
+    """
+    Micro-average: flatten all occurrences of all word types and mean together.
+    High-frequency words contribute proportionally more.
+
+    Args:
+        collected: output of collect_key_vectors
+                   { word: { (layer, head): {"k0": [...], "k1": [...]} } }
+
+    Returns:
+        { (layer_idx, head_idx): {"k0": tensor(head_dim,), "k1": tensor(head_dim,)} }
+    """
+    # gather all occurrence tensors per (layer, head) across all words
+    accum = defaultdict(lambda: {"k0": [], "k1": []})
+    for word_data in collected.values():
+        for key, val in word_data.items():
+            accum[key]["k0"].extend(val["k0"])  # flat list of (head_dim,) tensors
+            accum[key]["k1"].extend(val["k1"])
+
     return {
         key: {
+            # (N_total_occurrences, head_dim) → (head_dim,)
             "k0": torch.stack(val["k0"]).mean(dim=0),
             "k1": torch.stack(val["k1"]).mean(dim=0),
         }
         for key, val in accum.items()
     }
+
+
+def macro_average_key_vectors(collected: dict) -> dict:
+    """
+    Macro-average: average occurrences within each word type first, then
+    average across word types. Every word contributes equally regardless
+    of how many times it appears.
+
+    Args:
+        collected: output of collect_key_vectors
+                   { word: { (layer, head): {"k0": [...], "k1": [...]} } }
+
+    Returns:
+        { (layer_idx, head_idx): {"k0": tensor(head_dim,), "k1": tensor(head_dim,)} }
+    """
+    # gather per-word means per (layer, head) across all words
+    accum = defaultdict(lambda: {"k0": [], "k1": []})
+    for word_data in collected.values():
+        for key, val in word_data.items():
+            # word_k0_mean / word_k1_mean = mean k0/k1 across occurrences of this word → (head_dim,)
+            accum[key]["k0"].append(torch.stack(val["k0"]).mean(dim=0))
+            accum[key]["k1"].append(torch.stack(val["k1"]).mean(dim=0))
+
+    return {
+        key: {
+            # (N_word_types, head_dim) → (head_dim,)
+            "k0": torch.stack(val["k0"]).mean(dim=0),
+            "k1": torch.stack(val["k1"]).mean(dim=0),
+        }
+        for key, val in accum.items()
+    }
+
+
+def save_key_vectors(collected: dict, path: str) -> None:
+    """
+    Saves the word-keyed collected key vectors to a .pt file.
+    Uses torch.save which natively handles dicts with tuple keys — JSON cannot.
+
+    Args:
+        collected: output of collect_key_vectors
+        path:      file path to save to (e.g. "output/kv_cache/FreeLaw_16000tokens_kv.pt")
+    """
+    torch.save(collected, path)
+
+
+def load_key_vectors(path: str) -> dict:
+    """
+    Loads a word-keyed collected key vectors dict from a .pt file.
+    Does not require the model — use this to re-analyze without re-running inference.
+
+    Args:
+        path: file path to load from
+
+    Returns:
+        { word: { (layer, head): {"k0": [...], "k1": [...]} } }
+    """
+    # weights_only=False needed because the file contains Python dicts/lists, not just tensors
+    return torch.load(path, map_location="cpu", weights_only=False)
+
+
+def extract_key_vectors(
+    text: str,
+    model,
+    tokenizer,
+    multi_token_words_map: dict,
+) -> dict:
+    """
+    Backward-compatible wrapper. Returns micro-averaged key vectors.
+    Use collect_key_vectors + micro_average_key_vectors / macro_average_key_vectors
+    directly for more control.
+    """
+    return micro_average_key_vectors(
+        collect_key_vectors(text, model, tokenizer, multi_token_words_map)
+    )
 
 
 def compute_polar_per_head(

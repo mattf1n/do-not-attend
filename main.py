@@ -1,3 +1,18 @@
+"""
+main.py — Entry point for all data collection runs.
+
+Two modes (selected interactively at startup):
+    1. Attention run   — fetches text, runs the model with output_attentions=True,
+                         aggregates attention weights per byword occurrence, saves as JSON.
+                         Output: output/{num_tokens}_tokens/{component}_kv.json
+
+    2. KV cache run    — fetches text, runs the model with use_cache=True,
+                         extracts k0/k1 key vectors per byword per (layer, head), saves as .pt.
+                         Output: output/kv_cache/{num_tokens}_tokens/{component}_kv.pt
+                         The .pt files can be reloaded later without the model for analysis.
+
+Both modes load the model once and loop over all selected components.
+"""
 import warnings
 from transformers import logging as transformers_logging
 from datasets import disable_progress_bar
@@ -15,6 +30,7 @@ from model import get_model, get_attentions
 from tokenization import get_multi_token_words, summarize_multi_token_words
 from analysis import aggregate_multi_token_word_attentions
 from data import get_data_samples, PILE_COMPONENTS
+from keys import collect_key_vectors, save_key_vectors
 
 
 def _get_max_tokens_input(default=20000):
@@ -284,6 +300,149 @@ def multi_component_run():
     print(f"\n[main] All components complete. Total time: {total_duration:.2f}s")
 
 
+def kv_cache_run():
+    """
+    Interactive KV cache extraction run.
+
+    For each selected component:
+      - fetches text from the Pile dataset
+      - identifies multi-token bywords
+      - runs one forward pass with use_cache=True (no attention matrices — much cheaper)
+      - extracts k0/k1 key vectors for each byword occurrence at every (layer, head)
+      - saves the result as a .pt file — reloadable without the model
+
+    Output per component: output/kv_cache/{num_tokens}_tokens/{component}_{num_tokens}tokens_kv.pt
+    """
+    print("[main] --- KV Cache Extraction Run ---")
+    total_start = time.time()
+
+    num_tokens = _get_max_tokens_input()
+    max_num_subtokens = _get_max_num_subtokens_input()
+
+    scope = input("1: all components\n2: subset\nelse (default): Pile-CC\n> ").strip()
+
+    if scope == "1":
+        components = PILE_COMPONENTS
+    elif scope == "2":
+        print("\nSelect components (enter numbers separated by spaces):")
+        for i, name in enumerate(PILE_COMPONENTS, start=1):
+            print(f"  {i}: {name}")
+        raw = input("\nYour selection: ").strip()
+        indices = [int(x) - 1 for x in raw.split() if x.isdigit()]
+        components = [PILE_COMPONENTS[i] for i in indices if 0 <= i < len(PILE_COMPONENTS)]
+        if not components:
+            print("[main] No valid components selected, aborting.")
+            return
+    else:
+        components = ["Pile-CC"]
+        print("[main] Defaulting to Pile-CC.")
+
+    print(f"[main] Will extract KV vectors for components: {components}")
+
+    base_dir = f"output/kv_cache/{num_tokens}_tokens"
+    if os.path.exists(base_dir):
+        choice = input(f"[main] '{base_dir}' already exists. Overwrite? [y/N]: ").strip().lower()
+        overwrite = choice == "y"
+    else:
+        overwrite = False
+    out_dir = _resolve_out_dir(base_dir, overwrite)
+    os.makedirs(out_dir, exist_ok=True)
+    print(f"[main] Output directory: {out_dir}")
+
+    # model is loaded once and reused across all components to avoid repeated load time
+    print("[main] Loading model and tokenizer (once for all components)...")
+    model, tokenizer = get_model()
+    print("[main] Model and tokenizer loaded.")
+
+    for component in components:
+        comp_start = time.time()
+        print(f"\n[main] ===== Processing component: '{component}' =====")
+        print(f"[main] Fetching up to {num_tokens} tokens of data...")
+        text, metadata = get_data_samples(
+            component=component,
+            max_tokens=num_tokens,
+            type="string",
+            return_metadata=True,
+        )
+        if metadata["num_samples"] == 0:
+            print(f"[main] Skipping '{component}': 0 samples collected.")
+            continue
+        print(f"[main] Data fetched: {metadata}")
+
+        print("[main] Getting multi-token words from text...")
+        multi_token_words_map = get_multi_token_words(text, tokenizer, max_num_subtokens)
+        print(f"[main] Found {len(multi_token_words_map)} unique multi-token words.")
+
+        # collect_key_vectors runs inference and extracts key vectors only for byword positions
+        # this is much faster than the attention run since no attention matrices are materialized
+        print(f"[main] Extracting key vectors for component='{component}'...")
+        collected = collect_key_vectors(text, model, tokenizer, multi_token_words_map)
+        print(f"[main] Extracted key vectors for {len(collected)} words.")
+
+        component_slug = _component_to_filename(component)
+        out_path = os.path.join(out_dir, f"{component_slug}_{num_tokens}tokens_kv.pt")
+        save_key_vectors(collected, out_path)
+        print(f"[main] Saved: {out_path} ({time.time() - comp_start:.1f}s)")
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    del model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        print("[main] Freed CUDA memory.")
+
+    print(f"\n[main] All components complete. Total time: {time.time() - total_start:.2f}s")
+
+
+def batch_kv_run(num_tokens, max_num_subtokens, components, overwrite=False):
+    """Non-interactive version of kv_cache_run for SBATCH jobs."""
+    print("[main] --- Batch KV Cache Run ---")
+    total_start = time.time()
+
+    out_dir = _resolve_out_dir(f"output/kv_cache/{num_tokens}_tokens", overwrite)
+    os.makedirs(out_dir, exist_ok=True)
+    print(f"[main] Output directory: {out_dir}")
+
+    print("[main] Loading model and tokenizer...")
+    model, tokenizer = get_model()
+    print("[main] Model and tokenizer loaded.")
+
+    for component in components:
+        comp_start = time.time()
+        print(f"\n[main] ===== Processing component: '{component}' =====")
+        text, metadata = get_data_samples(
+            component=component,
+            max_tokens=num_tokens,
+            type="string",
+            return_metadata=True,
+        )
+        if metadata["num_samples"] == 0:
+            print(f"[main] Skipping '{component}': 0 samples collected.")
+            continue
+        print(f"[main] Data fetched: {metadata}")
+
+        multi_token_words_map = get_multi_token_words(text, tokenizer, max_num_subtokens)
+        print(f"[main] Found {len(multi_token_words_map)} unique multi-token words.")
+
+        collected = collect_key_vectors(text, model, tokenizer, multi_token_words_map)
+        print(f"[main] Extracted key vectors for {len(collected)} words.")
+
+        component_slug = _component_to_filename(component)
+        out_path = os.path.join(out_dir, f"{component_slug}_{num_tokens}tokens_kv.pt")
+        save_key_vectors(collected, out_path)
+        print(f"[main] Saved: {out_path} ({time.time() - comp_start:.1f}s)")
+
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    del model
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+
+    print(f"\n[main] All components complete. Total time: {time.time() - total_start:.2f}s")
+
+
 def batch_run(num_tokens, max_num_subtokens, components, overwrite=False):
     """Non-interactive version of multi_component_run for SBATCH jobs."""
     import argparse
@@ -379,6 +538,10 @@ def main():
         "--overwrite", action="store_true",
         help="Overwrite existing output folder instead of creating a numbered duplicate.",
     )
+    parser.add_argument(
+        "--mode", type=str, default="attention", choices=["attention", "kv"],
+        help="Batch mode: 'attention' (default) or 'kv' for KV cache extraction.",
+    )
     args, _ = parser.parse_known_args()
 
     if args.batch:
@@ -388,10 +551,22 @@ def main():
             components = [c.strip() for c in args.components.split(",")]
         else:
             components = ["Pile-CC"]
-        batch_run(args.tokens, args.max_subtokens, components, overwrite=args.overwrite)
+        if args.mode == "kv":
+            batch_kv_run(args.tokens, args.max_subtokens, components, overwrite=args.overwrite)
+        else:
+            batch_run(args.tokens, args.max_subtokens, components, overwrite=args.overwrite)
     else:
         print("[main] Starting...")
-        multi_component_run()
+        mode = input(
+            "Choose mode:\n"
+            "  1. Attention run (aggregate attention weights)\n"
+            "  2. KV cache extraction (save key vectors per word)\n"
+            "Enter 1 or 2: "
+        ).strip()
+        if mode == "2":
+            kv_cache_run()
+        else:
+            multi_component_run()
 
 
 if __name__ == "__main__":

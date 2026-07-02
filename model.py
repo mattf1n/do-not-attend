@@ -24,13 +24,23 @@ def _ensure_model_backend_available(model_name):
         ) from exc
 
 
-def get_model(model_name=DEFAULT_MODEL):
+def get_model(model_name=DEFAULT_MODEL, attn_implementation="eager"):
+    """
+    Load the model and tokenizer.
+
+    Args:
+        model_name:          HuggingFace model identifier
+        attn_implementation: attention backend to use —
+                             "eager"  : standard PyTorch; required for output_attentions=True (attention run)
+                             "sdpa"   : PyTorch scaled dot-product attention; faster, no attention weight output (KV run)
+                             "flash_attention_2": fastest, GPU+CUDA only, requires flash-attn package
+    """
     _ensure_model_backend_available(model_name)
     # device_map="auto" streams weights directly to GPU via accelerate,
     # avoiding the CPU staging copy that would require 2x model size in RAM.
     model = AutoModelForCausalLM.from_pretrained(
         model_name,
-        attn_implementation="eager",
+        attn_implementation=attn_implementation,
         torch_dtype=torch.float16).to(DEVICE)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     return model, tokenizer

@@ -19,6 +19,7 @@ from datasets import disable_progress_bar
 
 warnings.filterwarnings("ignore", message=".*rope_parameters.*")  # silence RoPE config type warnings
 transformers_logging.set_verbosity_error()                         # suppress transformers info/warnings, errors only
+transformers_logging.disable_progress_bar()                        # hide "Loading weights" tqdm bar from from_pretrained
 disable_progress_bar()                                             # hide datasets "Resolving data files" bar
 
 import json
@@ -351,7 +352,7 @@ def kv_cache_run():
 
     # model is loaded once and reused across all components to avoid repeated load time
     print("[main] Loading model and tokenizer (once for all components)...")
-    model, tokenizer = get_model()
+    model, tokenizer = get_model(attn_implementation="sdpa")
     print("[main] Model and tokenizer loaded.")
 
     for component in components:
@@ -373,10 +374,17 @@ def kv_cache_run():
         multi_token_words_map = get_multi_token_words(text, tokenizer, max_num_subtokens)
         print(f"[main] Found {len(multi_token_words_map)} unique multi-token words.")
 
-        # collect_key_vectors runs inference and extracts key vectors only for byword positions
-        # this is much faster than the attention run since no attention matrices are materialized
+        # run inference once per component to get the KV cache
+        # no attention matrices are materialized — much cheaper than the attention run
+        print(f"[main] Running inference for component='{component}'...")
+        device = next(model.parameters()).device
+        inputs = tokenizer(text, return_tensors="pt")
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        with torch.no_grad():
+            outputs = model(**inputs, use_cache=True, return_dict=True)
+
         print(f"[main] Extracting key vectors for component='{component}'...")
-        collected = collect_key_vectors(text, model, tokenizer, multi_token_words_map)
+        collected = collect_key_vectors(outputs.past_key_values, multi_token_words_map)
         print(f"[main] Extracted key vectors for {len(collected)} words.")
 
         component_slug = _component_to_filename(component)
@@ -405,7 +413,7 @@ def batch_kv_run(num_tokens, max_num_subtokens, components, overwrite=False):
     print(f"[main] Output directory: {out_dir}")
 
     print("[main] Loading model and tokenizer...")
-    model, tokenizer = get_model()
+    model, tokenizer = get_model(attn_implementation="sdpa")
     print("[main] Model and tokenizer loaded.")
 
     for component in components:
@@ -425,7 +433,13 @@ def batch_kv_run(num_tokens, max_num_subtokens, components, overwrite=False):
         multi_token_words_map = get_multi_token_words(text, tokenizer, max_num_subtokens)
         print(f"[main] Found {len(multi_token_words_map)} unique multi-token words.")
 
-        collected = collect_key_vectors(text, model, tokenizer, multi_token_words_map)
+        device = next(model.parameters()).device
+        inputs = tokenizer(text, return_tensors="pt")
+        inputs = {k: v.to(device) for k, v in inputs.items()}
+        with torch.no_grad():
+            outputs = model(**inputs, use_cache=True, return_dict=True)
+
+        collected = collect_key_vectors(outputs.past_key_values, multi_token_words_map)
         print(f"[main] Extracted key vectors for {len(collected)} words.")
 
         component_slug = _component_to_filename(component)

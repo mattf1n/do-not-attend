@@ -12,6 +12,8 @@ Usage:
     python run_experiments.py --folder output/500_tokens/ --exp 4 5       # subset of exps
     python run_experiments.py output/my_output.json --exp 4 5 --word 'Colo'           # single word
     python run_experiments.py output/my_output.json --exp 4 5 --filter space_numbers  # word category
+    python run_experiments.py --exp 8 --pt output/kv_cache/16000_tokens/Pile-CC_16000tokens_kv.pt
+    python run_experiments.py --exp 8 --pt output/kv_cache/16000_tokens/
 
 Experiments:
     2 — Box-whisker plots: attention score distributions per subtoken per head
@@ -19,6 +21,9 @@ Experiments:
         (requires re-running the model to extract past_key_values)
     4 — Hypothesis rate analysis: heatmap + per-layer bar chart
     5 — Michelson contrast analysis: heatmap + per-layer bar chart
+    8 — KV cache polar heatmaps: theta and r heatmaps across full-attention layers
+        for each word category (all, space_numbers, numbers, words, space_words),
+        micro- and macro-averaged. Requires --pt. Does not re-run the model.
 
     Pooled experiments (--folder mode only, micro-averaged across all components):
     6 — Pooled hypothesis rate analysis (heatmap + per-layer bar)
@@ -35,12 +40,17 @@ Output folder structure:
     In --folder mode each JSON is nested under the input folder name, e.g.:
         output/500_tokens/PubMed_Abstracts_500tokens.json
         → figures/500_tokens/PubMed_Abstracts_500tokens/
+
+    Exp 8 output uses the .pt filename stem, e.g.:
+        output/kv_cache/16000_tokens/Pile-CC_16000tokens_kv.pt
+        → figures/Pile-CC_16000tokens_kv/polar/<filter>/kv_theta_heatmap_micro.png
 """
 
 import argparse
 import json
 import tempfile
 from pathlib import Path
+import os
 
 from analysis import (
     compute_head_hypothesis_rates,
@@ -124,12 +134,16 @@ def get_dataset_slug(json_path: str, npz_path: str = None) -> str:
     return slug
 
 
-def get_base_dir(token_folder: str, component_slug: str, label: str) -> str:
+def get_base_dir(token_folder: str, component_slug: str, label: str, subfolder: str = None) -> str:
     """
-    Returns the output directory: figures/{token_folder}/{component_slug}/{label}/
+    Returns the output directory: figures/{token_folder}/{component_slug}/[{subfolder}/]{label}/
     Creates it if it doesn't exist.
     """
-    base = Path("figures") / token_folder / component_slug / label
+    parts = [token_folder, component_slug]
+    if subfolder:
+        parts.append(subfolder)
+    parts.append(label)
+    base = Path("figures").joinpath(*parts)
     return str(base)
 
 
@@ -184,11 +198,16 @@ def run_exp3(
     print("Loading model for key vector extraction...")
     model, tokenizer = get_model()
 
+    print("Running inference...")
+    import torch
+    inputs = tokenizer(text, return_tensors="pt").to(next(model.parameters()).device)
+    with torch.no_grad():
+        outputs = model(**inputs, use_cache=True, return_dict=True)
+
     print("Extracting key vectors...")
-    key_vectors = extract_key_vectors(text, model, tokenizer, multi_token_words_map)
+    key_vectors = extract_key_vectors(outputs.past_key_values, multi_token_words_map)
 
     del model
-    import torch
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         print("Freed CUDA memory.")
@@ -393,9 +412,69 @@ def run_exp7(json_paths: list, output_dir: str) -> None:
     plot_layer_contrast_bar(layer_contrasts_macro, output_dir=output_dir, suffix="_macro")
 
 
+def get_pt_slug(pt_path: str) -> str:
+    """
+    Derives a component slug from a .pt filename by stripping the _Ntokens_kv suffix.
+    E.g. Pile-CC_16000tokens_kv.pt → Pile-CC
+    """
+    import re
+    stem = Path(pt_path).stem
+    return re.sub(r'_\d+tokens_kv$', '', stem)
 
-def _run_all_exps(json_path: str, base_dir: str, args) -> None:
-    """Run all selected experiments for a single JSON file, writing into base_dir."""
+
+def run_exp8(pt_path: str, base_dir: str) -> None:
+    """
+    Experiment 8: KV cache polar heatmaps.
+    Loads a collected key-vector .pt file and produces r/theta heatmaps for each
+    word category (all, space_numbers, numbers, words, space_words) using both
+    micro- and macro-averaging. No model re-run required.
+
+    Args:
+        pt_path:  path to a collected .pt file from the KV cache run
+        base_dir: output root — filter subfolders are written directly under here
+                  (caller is responsible for including "polar" in the path)
+
+    Output per filter: {base_dir}/<filter>/
+        kv_theta_heatmap_micro.png  — angular separation (k0 vs k1) per (layer, head)
+        kv_theta_heatmap_macro.png
+        kv_r_heatmap_micro.png      — magnitude ratio ||k0||/||k1|| per (layer, head)
+        kv_r_heatmap_macro.png
+    """
+    print("\n=== Experiment 8: KV Cache Polar Heatmaps ===")
+
+    from keys import (load_key_vectors, filter_collected,
+                      micro_average_key_vectors, macro_average_key_vectors,
+                      compute_polar_per_head)
+    from visualizations import plot_polar_heatmaps
+
+    collected = load_key_vectors(pt_path)
+    print(f"[exp8] Loaded {len(collected)} words from {pt_path}")
+
+    filters = ["all", "space_numbers", "numbers", "words", "space_words"]
+    for filter_name in filters:
+        filtered = filter_collected(collected, filter_name)
+        if not filtered:
+            print(f"[exp8] skip '{filter_name}': no words matched")
+            continue
+        print(f"[exp8] Filter '{filter_name}': {len(filtered)} words")
+        out_dir = os.path.join(base_dir, filter_name)
+        for avg_name, avg_fn in [("micro", micro_average_key_vectors),
+                                  ("macro", macro_average_key_vectors)]:
+            key_vectors = avg_fn(filtered)
+            polar_data = compute_polar_per_head(key_vectors)
+            plot_polar_heatmaps(
+                polar_data,
+                output_dir=out_dir,
+                suffix=f"_{avg_name}",
+                context=f"{filter_name} | {avg_name}-avg | {Path(pt_path).stem}",
+            )
+
+
+def _run_all_exps(json_path: str, attn_base_dir: str, other_base_dir: str, args) -> None:
+    """Run all selected experiments for a single JSON file.
+    Attention experiments (2, 4, 5) write to attn_base_dir.
+    Exp 3 writes to other_base_dir.
+    """
     word = getattr(args, "word", None)
     label = getattr(args, "label", "all")
     filter_name = getattr(args, "filter", None)
@@ -425,7 +504,7 @@ def _run_all_exps(json_path: str, base_dir: str, args) -> None:
         if 2 in args.exp:
             run_exp2(
                 json_path,
-                output_dir=base_dir,
+                output_dir=attn_base_dir,
                 nrows=args.nrows,
                 ncols=args.ncols,
             )
@@ -433,7 +512,7 @@ def _run_all_exps(json_path: str, base_dir: str, args) -> None:
         if 3 in args.exp:
             run_exp3(
                 json_path,
-                output_dir=base_dir,
+                output_dir=other_base_dir,
                 nrows=args.nrows,
                 ncols=args.ncols,
             )
@@ -441,7 +520,7 @@ def _run_all_exps(json_path: str, base_dir: str, args) -> None:
         if 4 in args.exp:
             run_exp4(
                 json_path,
-                output_dir=base_dir,
+                output_dir=attn_base_dir,
                 threshold=args.threshold,
                 word=word,
                 label=label,
@@ -450,12 +529,12 @@ def _run_all_exps(json_path: str, base_dir: str, args) -> None:
         if 5 in args.exp:
             run_exp5(
                 json_path,
-                output_dir=base_dir,
+                output_dir=attn_base_dir,
                 word=word,
                 label=label,
             )
 
-        print(f"\nAll selected experiments complete. Outputs in {base_dir}/")
+        print(f"\nAll selected experiments complete. Attention outputs in {attn_base_dir}/")
     finally:
         if temp_path is not None:
             Path(temp_path).unlink(missing_ok=True)
@@ -483,13 +562,20 @@ def main():
              "If given, json_path is ignored.",
     )
     parser.add_argument(
+        "--pt",
+        default=None,
+        help="Path to a KV cache .pt file produced by the kv run (required for exp 8). "
+             "E.g. output/kv_cache/16000_tokens/Pile-CC_16000tokens_kv.pt",
+    )
+    parser.add_argument(
         "--exp",
         nargs="+",
         type=int,
-        choices=[2, 3, 4, 5, 6, 7],
+        choices=[2, 3, 4, 5, 6, 7, 8],
         default=None,
         help="Which experiments to run (default: all unless --stats is the only flag). "
-             "Exps 6-7 are pooled versions and only run in --folder mode.",
+             "Exps 6-7 are pooled versions and only run in --folder mode. "
+             "Exp 8 requires --pt.",
     )
     parser.add_argument(
         "--threshold",
@@ -567,9 +653,11 @@ def main():
 
 
 def _write_stats(json_path: str, base_dir: str) -> None:
-    """Generate and save a filter stats table to the component parent directory."""
+    """Generate and save a filter stats table to the component directory."""
     stats_text = generate_filter_stats(json_path)
-    component_dir = Path(base_dir).parent
+    # base_dir is figures/{tokens}/{component}/attention/{label}
+    # so parent.parent is the component dir
+    component_dir = Path(base_dir).parent.parent
     component_dir.mkdir(parents=True, exist_ok=True)
     out_path = component_dir / "filter_stats.txt"
     out_path.write_text(stats_text, encoding="utf-8")
@@ -590,17 +678,18 @@ def _main_run(args) -> None:
         for json_file in json_files:
             json_path = str(json_file)
             slug = get_dataset_slug(json_path)
-            base_dir = get_base_dir(folder_name, slug, args.label)
+            attn_base = get_base_dir(folder_name, slug, args.label, subfolder="attention")
+            other_base = get_base_dir(folder_name, slug, args.label, subfolder="other")
             print(f"--- Input: {json_path}")
-            print(f"    Output base dir: {base_dir}/")
+            print(f"    Attention output dir: {attn_base}/")
             if getattr(args, "stats", False):
-                _write_stats(json_path, base_dir)
-            _run_all_exps(json_path, base_dir, args)
+                _write_stats(json_path, attn_base)
+            _run_all_exps(json_path, attn_base, other_base, args)
 
         pooled_exps = [e for e in [6, 7] if e in args.exp]
         if pooled_exps:
             print(f"\n--- Pooled experiments {pooled_exps} across {len(json_paths)} components ---")
-            pooled_base = get_base_dir(folder_name, "_pooled", args.label)
+            pooled_base = get_base_dir(folder_name, "_pooled", args.label, subfolder="attention")
             if 6 in args.exp:
                 run_exp6(json_paths, output_dir=pooled_base, threshold=args.threshold)
             if 7 in args.exp:
@@ -612,20 +701,40 @@ def _main_run(args) -> None:
             json_path, is_temp = resolve_json_path(args)
             token_folder = Path(json_path).parent.name
             slug = get_dataset_slug(json_path, npz_path=args.npz)
-            base_dir = get_base_dir(token_folder, slug, args.label)
+            attn_base = get_base_dir(token_folder, slug, args.label, subfolder="attention")
+            other_base = get_base_dir(token_folder, slug, args.label, subfolder="other")
 
             source_label = args.npz if args.npz else json_path
             print(f"Input:               {source_label}")
             print(f"Dataset slug:        {slug}")
-            print(f"Output base dir:     {base_dir}/")
+            print(f"Attention output:    {attn_base}/")
             print(f"Experiments to run:  {args.exp}")
 
             if getattr(args, "stats", False):
-                _write_stats(json_path, base_dir)
-            _run_all_exps(json_path, base_dir, args)
+                _write_stats(json_path, attn_base)
+            _run_all_exps(json_path, attn_base, other_base, args)
         finally:
             if is_temp:
                 Path(json_path).unlink(missing_ok=True)
+
+    if 8 in args.exp:
+        if not args.pt:
+            print("[exp8] Skipping: --pt not provided. Pass a .pt file path or directory to run exp 8.")
+        elif os.path.isdir(args.pt):
+            pt_files = sorted(Path(args.pt).glob("*.pt"))
+            if not pt_files:
+                print(f"[exp8] No .pt files found in {args.pt}")
+            else:
+                token_folder = Path(args.pt).name
+                for pt_file in pt_files:
+                    slug = get_pt_slug(str(pt_file))
+                    base_dir_8 = get_base_dir(token_folder, slug, "polar")
+                    run_exp8(str(pt_file), base_dir_8)
+        else:
+            token_folder = Path(args.pt).parent.name
+            slug = get_pt_slug(args.pt)
+            base_dir_8 = get_base_dir(token_folder, slug, "polar")
+            run_exp8(args.pt, base_dir_8)
 
 
 if __name__ == "__main__":

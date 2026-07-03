@@ -1,10 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=do-not-attend-kv
-#SBATCH --partition=main
+#SBATCH --partition=gpu
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=64
-#SBATCH --mem=248G
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --gres=gpu:a40:1
 #SBATCH --time=2-00:00:00
 #SBATCH --account=swabhas_1625
 #SBATCH --output=logs/%x_%j.out

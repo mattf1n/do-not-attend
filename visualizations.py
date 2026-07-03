@@ -488,6 +488,84 @@ def plot_diff_contrast_heatmap(
     print(f"Saved {out_path}")
 
 
+def plot_polar_heatmaps(
+    polar_data: dict,
+    output_dir: str = "figures/polar",
+    suffix: str = "",
+    context: str = "",
+) -> None:
+    """
+    Produces two heatmaps from compute_polar_per_head output — one for theta
+    (angular separation between k0 and k1) and one for r (magnitude ratio).
+    Only layers present in polar_data appear as rows (full-attention layers only).
+
+    Args:
+        polar_data: output of keys.compute_polar_per_head
+                    { (layer_idx, head_idx): (r, theta) }
+        output_dir: directory to save PNGs into
+        suffix:     string appended before .png (e.g. "_micro" or "_macro")
+        context:    descriptive string shown in the plot title
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    if not polar_data:
+        print("[plot_polar_heatmaps] No data to plot.")
+        return
+
+    present_layers = sorted({layer for layer, _ in polar_data})
+    num_heads = max(head for _, head in polar_data) + 1
+    layer_to_row = {layer: row for row, layer in enumerate(present_layers)}
+    num_rows = len(present_layers)
+
+    theta_grid = np.zeros((num_rows, num_heads))
+    r_grid = np.zeros((num_rows, num_heads))
+    for (layer, head), (r, theta) in polar_data.items():
+        row = layer_to_row[layer]
+        theta_grid[row, head] = float(theta)
+        r_grid[row, head] = float(r)
+
+    fig_w = max(10, num_heads * 0.55)
+    fig_h = max(4, num_rows * 0.55)
+    font_size = max(4, min(7, int(80 / max(num_rows, num_heads))))
+
+    for grid, cmap, vmin, vmax, label, filename in [
+        (theta_grid, "plasma",   0,   np.pi, "theta (radians)",    f"kv_theta_heatmap{suffix}.png"),
+        (r_grid,     "coolwarm", 0,   None,  "r = ||k0|| / ||k1||", f"kv_r_heatmap{suffix}.png"),
+    ]:
+        if vmax is None:
+            vmax = float(np.nanmax(np.abs(r_grid - 1))) + 1  # center coolwarm at 1
+            vmin = max(0, 1 - (vmax - 1))
+            vmax = 1 + (vmax - 1)
+
+        fig, ax = plt.subplots(figsize=(fig_w, fig_h))
+        im = ax.imshow(grid, vmin=vmin, vmax=vmax, aspect="auto", cmap=cmap)
+        plt.colorbar(im, ax=ax, label=label)
+
+        for row in range(num_rows):
+            for head in range(num_heads):
+                ax.text(
+                    head, row, f"{grid[row, head]:.2f}",
+                    ha="center", va="center", fontsize=font_size, color="black",
+                )
+
+        ax.set_xlabel("Head", fontsize=10)
+        ax.set_ylabel("Layer", fontsize=10)
+        ax.set_xticks(range(num_heads))
+        ax.set_yticks(range(num_rows))
+        ax.set_xticklabels(range(num_heads), fontsize=7)
+        ax.set_yticklabels(present_layers, fontsize=7)
+        title = f"KV key vectors — {label} per (layer, head)"
+        if context:
+            title = f"{title}\n{context}"
+        ax.set_title(title, fontsize=12)
+
+        plt.tight_layout()
+        out_path = os.path.join(output_dir, filename)
+        plt.savefig(out_path, dpi=150)
+        plt.close()
+        print(f"Saved {out_path}")
+
+
 def plot_layer_contrast_bar(
     layer_contrasts: dict,
     output_dir: str = "visuals/experiments/exp_contrast",

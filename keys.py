@@ -2,7 +2,7 @@
 keys.py — Key vector extraction and analysis for multi-token words.
 
 Main workflow:
-    1. collect_key_vectors   — run inference, extract raw k0/k1 vectors per word per (layer, head)
+    1. collect_key_vectors   — given past_key_values, extract raw k0/k1 vectors per word per (layer, head)
     2. save_key_vectors      — persist the collected dict to disk as a .pt file
     3. load_key_vectors      — reload from disk (no model needed)
     4. micro/macro_average   — reduce to one (head_dim,) vector per (layer, head) for analysis
@@ -22,6 +22,7 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 
 from model import get_model
+from utils import classify_word, WORD_CATEGORIES
 
 matplotlib.use("Agg")
 
@@ -83,37 +84,38 @@ def plot_polar_point(r, theta, save_path="plot.png"):
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+def get_full_attention_layer_indices(past_key_values) -> list:
+    """
+    Returns indices of full attention layers by inspecting KV cache sequence lengths.
+    Sliding window layers cache only the last W tokens and have shape[2] < seq_len;
+    full attention layers cache the entire sequence and have the maximum shape[2].
+    """
+    seq_lens = [past_key_values.layers[i].keys.shape[2] for i in range(len(past_key_values))]
+    max_seq_len = max(seq_lens)
+    return [i for i, s in enumerate(seq_lens) if s == max_seq_len]
+
+
 def collect_key_vectors(
-    text: str,
-    model,
-    tokenizer,
+    past_key_values,
     multi_token_words_map: dict,
 ) -> dict:
     """
-    Runs inference and collects raw key vectors grouped by word type.
+    Collects raw key vectors from a pre-computed KV cache, grouped by word type.
+    Only full attention layers are used — sliding window layers have a truncated KV
+    cache that does not cover all token positions, causing out-of-bounds errors.
 
     Args:
-        text:                  raw input string
-        model:                 loaded HuggingFace causal LM
-        tokenizer:             corresponding tokenizer
+        past_key_values:       outputs.past_key_values from a forward pass with use_cache=True
         multi_token_words_map: output of tokenization.get_multi_token_words
 
     Returns:
         { word: { (layer_idx, head_idx): {"k0": [occ1, occ2, ...],
                                           "k1": [occ1, occ2, ...]} } }
         Keyed by word string for easy filtering. Each occ is a (head_dim,) tensor.
+        layer_idx values correspond to the original model layer indices.
     """
-    device = next(model.parameters()).device
-    inputs = tokenizer(text, return_tensors="pt")
-    inputs = {k: v.to(device) for k, v in inputs.items()}
-
-    # use_cache=True makes HuggingFace store key/value vectors in past_key_values
-    # without it there's no way to access the KV cache after the forward pass
-    with torch.no_grad():
-        outputs = model(**inputs, use_cache=True, return_dict=True)
-
-    pkv = outputs.past_key_values
-    num_layers = len(pkv)
+    pkv = past_key_values
+    full_attn_layers = get_full_attention_layer_indices(pkv)
 
     # word → {(layer, head): {"k0": [occ tensors], "k1": [occ tensors]}}
     collected = {}
@@ -125,7 +127,7 @@ def collect_key_vectors(
             token_indices = occ["token_indices"]
             if len(token_indices) != 2:
                 continue
-            for layer_idx in range(num_layers):
+            for layer_idx in full_attn_layers:
                 # shape: (batch, num_kv_heads, seq_len, head_dim)
                 # num_kv_heads may be < num_query_heads due to GQA (e.g. 8 vs 32 for OLMo-3-7B)
                 layer_keys = pkv.layers[layer_idx].keys
@@ -142,6 +144,26 @@ def collect_key_vectors(
             collected[word] = dict(word_data)
 
     return collected
+
+
+def filter_collected(collected: dict, filter_name: str) -> dict:
+    """
+    Returns a subset of collected keyed only by words matching filter_name.
+
+    Args:
+        collected:   output of collect_key_vectors
+        filter_name: "all" to return unchanged, or any key from WORD_CATEGORIES
+                     (e.g. "space_numbers", "numbers", "words", "space_words")
+
+    Returns:
+        filtered dict with same structure as collected
+    """
+    if filter_name == "all":
+        return collected
+    valid = set(WORD_CATEGORIES.keys())
+    if filter_name not in valid:
+        raise ValueError(f"Unknown filter {filter_name!r}. Valid: {sorted(valid)}")
+    return {w: v for w, v in collected.items() if classify_word(w) == filter_name}
 
 
 def micro_average_key_vectors(collected: dict) -> dict:
@@ -232,9 +254,7 @@ def load_key_vectors(path: str) -> dict:
 
 
 def extract_key_vectors(
-    text: str,
-    model,
-    tokenizer,
+    past_key_values,
     multi_token_words_map: dict,
 ) -> dict:
     """
@@ -243,7 +263,7 @@ def extract_key_vectors(
     directly for more control.
     """
     return micro_average_key_vectors(
-        collect_key_vectors(text, model, tokenizer, multi_token_words_map)
+        collect_key_vectors(past_key_values, multi_token_words_map)
     )
 
 
@@ -294,10 +314,10 @@ def plot_polar_grid(
         print("[plot_polar_grid] No data to plot.")
         return
 
-    num_layers = max(layer for layer, _ in polar_data) + 1
     num_heads = nrows * ncols
+    present_layers = sorted({layer for layer, _ in polar_data})
 
-    for layer in range(num_layers):
+    for layer in present_layers:
         fig, axes = plt.subplots(
             nrows, ncols,
             figsize=(ncols * 3, nrows * 3),
@@ -350,7 +370,10 @@ if __name__ == "__main__":
     multi_token_words_map = in_map["main_data"]
 
     model, tokenizer = get_model()
-    key_vectors = extract_key_vectors(text, model, tokenizer, multi_token_words_map)
+    inputs = tokenizer(text, return_tensors="pt").to(next(model.parameters()).device)
+    with torch.no_grad():
+        outputs = model(**inputs, use_cache=True, return_dict=True)
+    key_vectors = extract_key_vectors(outputs.past_key_values, multi_token_words_map)
     del model
 
     polar_data = compute_polar_per_head(key_vectors)

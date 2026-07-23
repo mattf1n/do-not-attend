@@ -30,6 +30,7 @@ layer = 0
 # ══════════════════════════════════════════════════════════════════════════════
 
 # model.py (raw HF) weights ─────────────────────────────────────────────────
+#Wq,Wk,Wv, Wo
 # Shapes as stored by HF (Linear.weight is always [out_features, in_features]):
 #   q_proj : [n_heads    * d_head, d_model]
 #   k_proj : [n_kv_heads * d_head, d_model]

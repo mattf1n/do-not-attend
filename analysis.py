@@ -388,6 +388,21 @@ def _repeat_kv(x, n_rep):
     )
 
 
+def _attn_head_counts(sa):
+    """Resolve (num_heads, num_kv_heads, head_dim) across HF attn module layouts."""
+    cfg = getattr(sa, "config", None)
+    num_heads = getattr(sa, "num_heads", None)
+    if num_heads is None and cfg is not None:
+        num_heads = cfg.num_attention_heads
+    num_kv_heads = getattr(sa, "num_key_value_heads", None)
+    if num_kv_heads is None and cfg is not None:
+        num_kv_heads = cfg.num_key_value_heads
+    head_dim = getattr(sa, "head_dim", None)
+    if head_dim is None and cfg is not None:
+        head_dim = getattr(cfg, "head_dim", cfg.hidden_size // num_heads)
+    return int(num_heads), int(num_kv_heads), int(head_dim)
+
+
 def get_attentions_head_streaming(text, model, tokenizer, multi_word_map):
     """
     Head-by-head variant of get_attentions_streaming.
@@ -402,9 +417,12 @@ def get_attentions_head_streaming(text, model, tokenizer, multi_word_map):
     Returns the same dict schema as get_attentions_streaming.
     """
     try:
-        from transformers.models.olmo.modeling_olmo import apply_rotary_pos_emb
+        from transformers.models.olmo3.modeling_olmo3 import apply_rotary_pos_emb
     except ImportError:
-        from transformers.models.llama.modeling_llama import apply_rotary_pos_emb
+        try:
+            from transformers.models.olmo.modeling_olmo import apply_rotary_pos_emb
+        except ImportError:
+            from transformers.models.llama.modeling_llama import apply_rotary_pos_emb
 
     device = next(model.parameters()).device
     inputs = tokenizer(text, return_tensors="pt")
@@ -413,19 +431,36 @@ def get_attentions_head_streaming(text, model, tokenizer, multi_word_map):
     agg = HeadByHeadAggregator(multi_word_map)
 
     def make_patched_forward(sa, layer_idx):
-        def patched_forward(hidden_states, attention_mask=None, position_ids=None,
-                            past_key_value=None, output_attentions=False,
-                            use_cache=False, cache_position=None,
-                            position_embeddings=None, **kwargs):
+        num_heads, num_kv_heads, head_dim = _attn_head_counts(sa)
+        n_kv_groups = getattr(sa, "num_key_value_groups", num_heads // num_kv_heads)
+        scale = getattr(sa, "scaling", 1.0 / math.sqrt(head_dim))
+
+        def patched_forward(
+            hidden_states,
+            attention_mask=None,
+            position_ids=None,
+            past_key_value=None,
+            past_key_values=None,
+            output_attentions=False,
+            use_cache=False,
+            cache_position=None,
+            position_embeddings=None,
+            **kwargs,
+        ):
             bsz, q_len, _ = hidden_states.shape
 
+            # OLMo-3 applies RMSNorm on Q/K after projection; Llama-style modules omit it.
             q = sa.q_proj(hidden_states)
             k = sa.k_proj(hidden_states)
             v = sa.v_proj(hidden_states)
+            if hasattr(sa, "q_norm"):
+                q = sa.q_norm(q)
+            if hasattr(sa, "k_norm"):
+                k = sa.k_norm(k)
 
-            q = q.view(bsz, q_len, sa.num_heads, sa.head_dim).transpose(1, 2)
-            k = k.view(bsz, q_len, sa.num_key_value_heads, sa.head_dim).transpose(1, 2)
-            v = v.view(bsz, q_len, sa.num_key_value_heads, sa.head_dim).transpose(1, 2)
+            q = q.view(bsz, q_len, num_heads, head_dim).transpose(1, 2)
+            k = k.view(bsz, q_len, num_kv_heads, head_dim).transpose(1, 2)
+            v = v.view(bsz, q_len, num_kv_heads, head_dim).transpose(1, 2)
 
             if position_embeddings is not None:
                 cos, sin = position_embeddings
@@ -433,31 +468,31 @@ def get_attentions_head_streaming(text, model, tokenizer, multi_word_map):
                 cos, sin = sa.rotary_emb(v, position_ids)
             q, k = apply_rotary_pos_emb(q, k, cos, sin)
 
-            n_kv_groups = sa.num_heads // sa.num_key_value_heads
             k = _repeat_kv(k, n_kv_groups)
             v = _repeat_kv(v, n_kv_groups)
 
-            scale = 1.0 / math.sqrt(sa.head_dim)
             attn_out = torch.zeros_like(q)
 
-            for h in range(sa.num_heads):
-                q_h = q[:, h:h+1]   # (bsz, 1, q_len, head_dim)
-                k_h = k[:, h:h+1]
-                v_h = v[:, h:h+1]
+            for h in range(num_heads):
+                q_h = q[:, h : h + 1]  # (bsz, 1, q_len, head_dim)
+                k_h = k[:, h : h + 1]
+                v_h = v[:, h : h + 1]
 
                 scores = torch.matmul(q_h, k_h.transpose(-2, -1)) * scale  # (bsz, 1, S, S)
                 if attention_mask is not None:
                     scores = scores + attention_mask
                 scores = F.softmax(scores, dim=-1, dtype=torch.float32).to(q.dtype)
 
-                agg.add_head(scores[0, 0], layer_idx, h)   # (S, S)
+                agg.add_head(scores[0, 0], layer_idx, h)  # (S, S)
 
-                attn_out[:, h:h+1] = torch.matmul(scores, v_h)
+                attn_out[:, h : h + 1] = torch.matmul(scores, v_h)
                 del scores
 
             attn_out = attn_out.transpose(1, 2).contiguous().view(bsz, q_len, -1)
             attn_out = sa.o_proj(attn_out)
-            return attn_out, None, past_key_value
+            # Olmo3Attention returns (attn_output, attn_weights); older Llama
+            # callers sometimes expect a 3-tuple including past_key_value.
+            return attn_out, None
 
         return patched_forward
 

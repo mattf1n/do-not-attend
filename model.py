@@ -1,5 +1,6 @@
 import torch
 from transformers import AutoModelForCausalLM, AutoTokenizer
+from transformer_lens.model_bridge import TransformerBridge
 
 from config import DEVICE, DEFAULT_MODEL
 
@@ -44,6 +45,35 @@ def get_model(model_name=DEFAULT_MODEL, attn_implementation="eager"):
         torch_dtype=torch.float16).to(DEVICE)
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     return model, tokenizer
+
+
+def get_bridge(model_name=DEFAULT_MODEL, attn_implementation="eager", dtype=torch.float16):
+    """
+    Load the model via TransformerLens TransformerBridge (not raw HF-only usage).
+
+    Mirrors get_model(): same model_name / attn_implementation, but returns a
+    TransformerBridge wrapping the HF weights for TL hooks/cache (hook_rot_q/k,
+    v.hook_out, run_with_cache, etc.). Reuses get_model() so weights are not
+    downloaded twice; the same tokenizer is passed into the bridge.
+
+    Args:
+        model_name:          HuggingFace model identifier
+        attn_implementation: forwarded to get_model (use "eager" when you need
+                             attention patterns; "sdpa" is fine for Q/K/V hooks)
+        dtype:               dtype for the bridge (default float16)
+
+    Returns:
+        (bridge, tokenizer)
+    """
+    hf_model, tokenizer = get_model(model_name, attn_implementation=attn_implementation)
+    bridge = TransformerBridge.boot_transformers(
+        model_name,
+        hf_model=hf_model,
+        tokenizer=tokenizer,
+        dtype=dtype,
+    )
+    return bridge, tokenizer
+
 
 def get_attentions(input_data, model, tokenizer):
     '''

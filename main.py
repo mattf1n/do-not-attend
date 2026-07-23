@@ -6,10 +6,11 @@ Two modes (selected interactively at startup):
                          aggregates attention weights per byword occurrence, saves as JSON.
                          Output: output/{num_tokens}_tokens/{component}_kv.json
 
-    2. KV cache run    — fetches text, runs the model with use_cache=True,
-                         extracts k0/k1 key vectors per byword per (layer, head), saves as .pt.
-                         Output: output/kv_cache/{num_tokens}_tokens/{component}_kv.pt
-                         The .pt files can be reloaded later without the model for analysis.
+    2. QKV slot run    — fetches text, runs TransformerLens bridge.run_with_cache,
+                         extracts q0/q1/k0/k1/v0/v1 vectors per byword per (layer, head),
+                         saves one .pt per slot.
+                         Output: output/qkv_cache/{num_tokens}_tokens/{component}_{N}tokens/{slot}.pt
+                         Slot files can be reloaded later without the model for analysis.
 
 Both modes load the model once and loop over all selected components.
 """
@@ -27,11 +28,11 @@ import os
 import time
 import torch
 
-from model import get_model, get_attentions
+from model import get_model, get_bridge, get_attentions
 from tokenization import get_multi_token_words, summarize_multi_token_words
 from analysis import aggregate_multi_token_word_attentions
 from data import get_data_samples, PILE_COMPONENTS
-from keys import collect_key_vectors, save_key_vectors
+from qkv_vectors import save_slot_vectors
 
 
 def _get_max_tokens_input(default=20000):
@@ -301,20 +302,20 @@ def multi_component_run():
     print(f"\n[main] All components complete. Total time: {total_duration:.2f}s")
 
 
-def kv_cache_run():
+def qkv_cache_run():
     """
-    Interactive KV cache extraction run.
+    Interactive QKV slot extraction run.
 
     For each selected component:
       - fetches text from the Pile dataset
       - identifies multi-token bywords
-      - runs one forward pass with use_cache=True (no attention matrices — much cheaper)
-      - extracts k0/k1 key vectors for each byword occurrence at every (layer, head)
-      - saves the result as a .pt file — reloadable without the model
+      - runs TransformerLens bridge.run_with_cache (prepend_bos=False)
+      - writes one .pt per slot (q0,q1,k0,k1,v0,v1) under a component folder
 
-    Output per component: output/kv_cache/{num_tokens}_tokens/{component}_{num_tokens}tokens_kv.pt
+    Output per component:
+      output/qkv_cache/{num_tokens}_tokens/{component}_{num_tokens}tokens/{slot}.pt
     """
-    print("[main] --- KV Cache Extraction Run ---")
+    print("[main] --- QKV Slot Extraction Run ---")
     total_start = time.time()
 
     num_tokens = _get_max_tokens_input()
@@ -338,9 +339,9 @@ def kv_cache_run():
         components = ["Pile-CC"]
         print("[main] Defaulting to Pile-CC.")
 
-    print(f"[main] Will extract KV vectors for components: {components}")
+    print(f"[main] Will extract Q/K/V slot vectors for components: {components}")
 
-    base_dir = f"output/kv_cache/{num_tokens}_tokens"
+    base_dir = f"output/qkv_cache/{num_tokens}_tokens"
     if os.path.exists(base_dir):
         choice = input(f"[main] '{base_dir}' already exists. Overwrite? [y/N]: ").strip().lower()
         overwrite = choice == "y"
@@ -350,10 +351,10 @@ def kv_cache_run():
     os.makedirs(out_dir, exist_ok=True)
     print(f"[main] Output directory: {out_dir}")
 
-    # model is loaded once and reused across all components to avoid repeated load time
-    print("[main] Loading model and tokenizer (once for all components)...")
-    model, tokenizer = get_model(attn_implementation="sdpa")
-    print("[main] Model and tokenizer loaded.")
+    # bridge is loaded once and reused across all components to avoid repeated load time
+    print("[main] Loading TransformerLens bridge + tokenizer (once for all components)...")
+    bridge, tokenizer = get_bridge(attn_implementation="sdpa")
+    print("[main] Bridge and tokenizer loaded.")
 
     for component in components:
         comp_start = time.time()
@@ -374,28 +375,27 @@ def kv_cache_run():
         multi_token_words_map = get_multi_token_words(text, tokenizer, max_num_subtokens)
         print(f"[main] Found {len(multi_token_words_map)} unique multi-token words.")
 
-        # run inference once per component to get the KV cache
-        # no attention matrices are materialized — much cheaper than the attention run
-        print(f"[main] Running inference for component='{component}'...")
-        device = next(model.parameters()).device
-        inputs = tokenizer(text, return_tensors="pt")
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+        print(f"[main] Running TL run_with_cache for component='{component}'...")
+        tokens = bridge.to_tokens(text, prepend_bos=False)
         with torch.no_grad():
-            outputs = model(**inputs, use_cache=True, return_dict=True)
+            _, cache = bridge.run_with_cache(tokens, prepend_bos=False)
 
-        print(f"[main] Extracting key vectors for component='{component}'...")
-        collected = collect_key_vectors(outputs.past_key_values, multi_token_words_map)
-        print(f"[main] Extracted key vectors for {len(collected)} words.")
-
+        print(f"[main] Extracting Q/K/V slot vectors for component='{component}'...")
         component_slug = _component_to_filename(component)
-        out_path = os.path.join(out_dir, f"{component_slug}_{num_tokens}tokens_kv.pt")
-        save_key_vectors(collected, out_path)
-        print(f"[main] Saved: {out_path} ({time.time() - comp_start:.1f}s)")
+        slot_dir = os.path.join(out_dir, f"{component_slug}_{num_tokens}tokens")
+        paths = save_slot_vectors(
+            cache,
+            multi_token_words_map,
+            slot_dir,
+            n_layers=bridge.cfg.n_layers,
+        )
+        print(f"[main] Saved slots to {slot_dir}/: {list(paths)} ({time.time() - comp_start:.1f}s)")
+        del cache
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    del model
+    del bridge
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         print("[main] Freed CUDA memory.")
@@ -403,18 +403,18 @@ def kv_cache_run():
     print(f"\n[main] All components complete. Total time: {time.time() - total_start:.2f}s")
 
 
-def batch_kv_run(num_tokens, max_num_subtokens, components, overwrite=False):
-    """Non-interactive version of kv_cache_run for SBATCH jobs."""
-    print("[main] --- Batch KV Cache Run ---")
+def batch_qkv_run(num_tokens, max_num_subtokens, components, overwrite=False):
+    """Non-interactive version of qkv_cache_run for SBATCH jobs."""
+    print("[main] --- Batch QKV Slot Run ---")
     total_start = time.time()
 
-    out_dir = _resolve_out_dir(f"output/kv_cache/{num_tokens}_tokens", overwrite)
+    out_dir = _resolve_out_dir(f"output/qkv_cache/{num_tokens}_tokens", overwrite)
     os.makedirs(out_dir, exist_ok=True)
     print(f"[main] Output directory: {out_dir}")
 
-    print("[main] Loading model and tokenizer...")
-    model, tokenizer = get_model(attn_implementation="sdpa")
-    print("[main] Model and tokenizer loaded.")
+    print("[main] Loading TransformerLens bridge + tokenizer...")
+    bridge, tokenizer = get_bridge(attn_implementation="sdpa")
+    print("[main] Bridge and tokenizer loaded.")
 
     for component in components:
         comp_start = time.time()
@@ -433,24 +433,25 @@ def batch_kv_run(num_tokens, max_num_subtokens, components, overwrite=False):
         multi_token_words_map = get_multi_token_words(text, tokenizer, max_num_subtokens)
         print(f"[main] Found {len(multi_token_words_map)} unique multi-token words.")
 
-        device = next(model.parameters()).device
-        inputs = tokenizer(text, return_tensors="pt")
-        inputs = {k: v.to(device) for k, v in inputs.items()}
+        tokens = bridge.to_tokens(text, prepend_bos=False)
         with torch.no_grad():
-            outputs = model(**inputs, use_cache=True, return_dict=True)
-
-        collected = collect_key_vectors(outputs.past_key_values, multi_token_words_map)
-        print(f"[main] Extracted key vectors for {len(collected)} words.")
+            _, cache = bridge.run_with_cache(tokens, prepend_bos=False)
 
         component_slug = _component_to_filename(component)
-        out_path = os.path.join(out_dir, f"{component_slug}_{num_tokens}tokens_kv.pt")
-        save_key_vectors(collected, out_path)
-        print(f"[main] Saved: {out_path} ({time.time() - comp_start:.1f}s)")
+        slot_dir = os.path.join(out_dir, f"{component_slug}_{num_tokens}tokens")
+        paths = save_slot_vectors(
+            cache,
+            multi_token_words_map,
+            slot_dir,
+            n_layers=bridge.cfg.n_layers,
+        )
+        print(f"[main] Saved slots to {slot_dir}/: {list(paths)} ({time.time() - comp_start:.1f}s)")
+        del cache
 
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
-    del model
+    del bridge
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
@@ -553,8 +554,8 @@ def main():
         help="Overwrite existing output folder instead of creating a numbered duplicate.",
     )
     parser.add_argument(
-        "--mode", type=str, default="attention", choices=["attention", "kv"],
-        help="Batch mode: 'attention' (default) or 'kv' for KV cache extraction.",
+        "--mode", type=str, default="attention", choices=["attention", "kv", "qkv"],
+        help="Batch mode: 'attention' (default) or 'qkv'/'kv' for QKV slot extraction.",
     )
     args, _ = parser.parse_known_args()
 
@@ -565,8 +566,8 @@ def main():
             components = [c.strip() for c in args.components.split(",")]
         else:
             components = ["Pile-CC"]
-        if args.mode == "kv":
-            batch_kv_run(args.tokens, args.max_subtokens, components, overwrite=args.overwrite)
+        if args.mode in ("kv", "qkv"):
+            batch_qkv_run(args.tokens, args.max_subtokens, components, overwrite=args.overwrite)
         else:
             batch_run(args.tokens, args.max_subtokens, components, overwrite=args.overwrite)
     else:
@@ -574,11 +575,11 @@ def main():
         mode = input(
             "Choose mode:\n"
             "  1. Attention run (aggregate attention weights)\n"
-            "  2. KV cache extraction (save key vectors per word)\n"
+            "  2. QKV slot extraction (save q/k/v vectors per word)\n"
             "Enter 1 or 2: "
         ).strip()
         if mode == "2":
-            kv_cache_run()
+            qkv_cache_run()
         else:
             multi_component_run()
 

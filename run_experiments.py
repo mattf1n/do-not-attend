@@ -2,7 +2,7 @@
 run_experiments.py
 
 Entry point for running all hypothesis experiments against a saved output JSON
-(produced by main.py). Does not re-run the model except for exp3 (key vectors).
+(produced by main.py). Does not re-run the model except for exp3 (Q/K/V vectors).
 
 Usage:
     python run_experiments.py                                             # uses default path
@@ -12,18 +12,18 @@ Usage:
     python run_experiments.py --folder output/500_tokens/ --exp 4 5       # subset of exps
     python run_experiments.py output/my_output.json --exp 4 5 --word 'Colo'           # single word
     python run_experiments.py output/my_output.json --exp 4 5 --filter space_numbers  # word category
-    python run_experiments.py --exp 8 --pt output/kv_cache/16000_tokens/Pile-CC_16000tokens_kv.pt
-    python run_experiments.py --exp 8 --pt output/kv_cache/16000_tokens/
+    python run_experiments.py --exp 8 --pt output/qkv_cache/16000_tokens/Pile-CC_16000tokens
+    python run_experiments.py --exp 8 --pt output/qkv_cache/16000_tokens/
 
 Experiments:
     2 — Box-whisker plots: attention score distributions per subtoken per head
-    3 — Key vector polar coordinates: geometric comparison of subtoken key vectors
-        (requires re-running the model to extract past_key_values)
+    3 — Vector polar coordinates: geometric comparison of subtoken vectors (default k0 vs k1)
+        (requires re-running via TransformerLens bridge to extract Q/K/V hooks)
     4 — Hypothesis rate analysis: heatmap + per-layer bar chart
     5 — Michelson contrast analysis: heatmap + per-layer bar chart
-    8 — KV cache polar heatmaps: theta and r heatmaps across full-attention layers
-        for each word category (all, space_numbers, numbers, words, space_words),
-        micro- and macro-averaged. Requires --pt. Does not re-run the model.
+    8 — All QKV slot-pair polar heatmaps (C(6,2)=15 ordered pairs): theta and r
+        for each word category, micro- and macro-averaged. Requires --pt (slot dir).
+        Pair order: A=earlier subtoken, B=later; r = ||A|| / ||B||.
 
     Pooled experiments (--folder mode only, micro-averaged across all components):
     6 — Pooled hypothesis rate analysis (heatmap + per-layer bar)
@@ -41,9 +41,9 @@ Output folder structure:
         output/500_tokens/PubMed_Abstracts_500tokens.json
         → figures/500_tokens/PubMed_Abstracts_500tokens/
 
-    Exp 8 output uses the .pt filename stem, e.g.:
-        output/kv_cache/16000_tokens/Pile-CC_16000tokens_kv.pt
-        → figures/Pile-CC_16000tokens_kv/polar/<filter>/kv_theta_heatmap_micro.png
+    Exp 8 output uses the slot-dir name, e.g.:
+        output/qkv_cache/16000_tokens/Pile-CC_16000tokens/
+        → figures/Pile-CC_16000tokens/polar/<filter>/kv_theta_heatmap_micro.png
 """
 
 import argparse
@@ -181,33 +181,55 @@ def run_exp3(
     ncols: int = 4,
 ) -> None:
     """
-    Experiment 3: Key vector polar coordinates.
-    Loads the original text and token indices from the JSON, re-runs the
-    model to get past_key_values, then plots polar grids per layer.
-    Token indices come directly from the JSON — no re-tokenization needed.
+    Experiment 3: Subtoken vector polar coordinates (default k0 vs k1).
+    Loads text and token indices from the JSON, runs the TransformerLens bridge
+    to extract post-RoPE K (and writes/uses slot files in memory via collect),
+    then plots polar grids per layer.
     """
-    print("\n=== Experiment 3: Key Vector Polar Coordinates ===")
+    print("\n=== Experiment 3: Vector Polar Coordinates (k0 vs k1) ===")
 
     in_map = load_json(json_path)
     text = in_map["text"]
     multi_token_words_map = in_map["main_data"]
 
-    from model import get_model
-    from keys import extract_key_vectors, compute_polar_per_head, plot_polar_grid
+    from model import get_bridge
+    from qkv_vectors import (
+        save_slot_vectors,
+        collect_vectors,
+        micro_average_vectors,
+        compute_polar_per_head,
+        plot_polar_grid,
+    )
 
-    print("Loading model for key vector extraction...")
-    model, tokenizer = get_model()
+    print("Loading TransformerLens bridge for vector extraction...")
+    bridge, tokenizer = get_bridge()
 
-    print("Running inference...")
+    print("Running run_with_cache...")
     import torch
-    inputs = tokenizer(text, return_tensors="pt").to(next(model.parameters()).device)
+    import tempfile
+
+    tokens = bridge.to_tokens(text, prepend_bos=False)
     with torch.no_grad():
-        outputs = model(**inputs, use_cache=True, return_dict=True)
+        _, cache = bridge.run_with_cache(tokens, prepend_bos=False)
 
-    print("Extracting key vectors...")
-    key_vectors = extract_key_vectors(outputs.past_key_values, multi_token_words_map)
+    print("Extracting k0/k1 slot vectors...")
+    with tempfile.TemporaryDirectory() as tmp:
+        save_slot_vectors(
+            cache,
+            multi_token_words_map,
+            tmp,
+            slots=("k0", "k1"),
+            n_layers=bridge.cfg.n_layers,
+        )
+        collected = collect_vectors(
+            os.path.join(tmp, "k0.pt"),
+            os.path.join(tmp, "k1.pt"),
+            "k0",
+            "k1",
+        )
+        key_vectors = micro_average_vectors(collected)
 
-    del model
+    del bridge, cache
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
         print("Freed CUDA memory.")
@@ -215,7 +237,13 @@ def run_exp3(
     print("Computing polar coordinates per head...")
     polar_data = compute_polar_per_head(key_vectors)
 
-    plot_polar_grid(polar_data, output_dir=output_dir, nrows=nrows, ncols=ncols)
+    plot_polar_grid(
+        polar_data,
+        output_dir=output_dir,
+        nrows=nrows,
+        ncols=ncols,
+        title_suffix="Key vector polar coords (k0 vs k1)",
+    )
     combine_layer_plots(
         input_dir=output_dir,
         ncols=1,
@@ -414,41 +442,72 @@ def run_exp7(json_paths: list, output_dir: str) -> None:
 
 def get_pt_slug(pt_path: str) -> str:
     """
-    Derives a component slug from a .pt filename by stripping the _Ntokens_kv suffix.
-    E.g. Pile-CC_16000tokens_kv.pt → Pile-CC
+    Derives a component slug from a slot directory or legacy .pt filename.
+    E.g. Pile-CC_16000tokens → Pile-CC
+         Pile-CC_16000tokens_kv.pt → Pile-CC
     """
     import re
-    stem = Path(pt_path).stem
-    return re.sub(r'_\d+tokens_kv$', '', stem)
+    stem = Path(pt_path).stem if Path(pt_path).is_file() else Path(pt_path).name
+    stem = re.sub(r'_\d+tokens_kv$', '', stem)
+    stem = re.sub(r'_\d+tokens$', '', stem)
+    return stem
 
 
-def run_exp8(pt_path: str, base_dir: str) -> None:
+def _slot_dir_has_pair(slot_dir: Path, name_a: str = "k0", name_b: str = "k1") -> bool:
+    return (slot_dir / f"{name_a}.pt").is_file() and (slot_dir / f"{name_b}.pt").is_file()
+
+
+def _slot_dir_has_all_slots(slot_dir: Path) -> bool:
+    from qkv_vectors import SLOTS
+    return all((slot_dir / f"{s}.pt").is_file() for s in SLOTS)
+
+
+def run_exp8(
+    slot_dir: str,
+    base_dir: str,
+    name_a: str = "k0",
+    name_b: str = "k1",
+) -> None:
     """
-    Experiment 8: KV cache polar heatmaps.
-    Loads a collected key-vector .pt file and produces r/theta heatmaps for each
-    word category (all, space_numbers, numbers, words, space_words) using both
-    micro- and macro-averaging. No model re-run required.
+    Experiment 8: one QKV slot-pair polar heatmaps.
+    Loads two slot .pt files from a component slot directory and produces r/theta
+    heatmaps for each word category using micro- and macro-averaging.
+    No model re-run required.
+
+    Polar convention: r = ||name_a|| / ||name_b|| (name_b is the reference).
+    Prefer order_slot_pair() so name_a is earlier subtoken and name_b is later.
 
     Args:
-        pt_path:  path to a collected .pt file from the KV cache run
+        slot_dir: directory containing {name_a}.pt and {name_b}.pt from save_slot_vectors
         base_dir: output root — filter subfolders are written directly under here
-                  (caller is responsible for including "polar" in the path)
+        name_a / name_b: which slots to pair (default k0 vs k1)
 
     Output per filter: {base_dir}/<filter>/
-        kv_theta_heatmap_micro.png  — angular separation (k0 vs k1) per (layer, head)
+        kv_theta_heatmap_micro.png
         kv_theta_heatmap_macro.png
-        kv_r_heatmap_micro.png      — magnitude ratio ||k0||/||k1|| per (layer, head)
+        kv_r_heatmap_micro.png
         kv_r_heatmap_macro.png
     """
-    print("\n=== Experiment 8: KV Cache Polar Heatmaps ===")
+    print(f"\n=== Experiment 8: Polar Heatmaps ({name_a} vs {name_b}) ===")
+    print(f"  r = ||{name_a}|| / ||{name_b}||")
 
-    from keys import (load_key_vectors, filter_collected,
-                      micro_average_key_vectors, macro_average_key_vectors,
-                      compute_polar_per_head)
+    from qkv_vectors import (
+        collect_vectors,
+        filter_collected,
+        micro_average_vectors,
+        macro_average_vectors,
+        compute_polar_per_head,
+    )
     from visualizations import plot_polar_heatmaps
 
-    collected = load_key_vectors(pt_path)
-    print(f"[exp8] Loaded {len(collected)} words from {pt_path}")
+    path_a = os.path.join(slot_dir, f"{name_a}.pt")
+    path_b = os.path.join(slot_dir, f"{name_b}.pt")
+    if not os.path.isfile(path_a) or not os.path.isfile(path_b):
+        print(f"[exp8] skip {name_a} vs {name_b}: missing {path_a} or {path_b}")
+        return
+
+    collected = collect_vectors(path_a, path_b, name_a, name_b)
+    print(f"[exp8] Loaded {len(collected)} words from {slot_dir} ({name_a} vs {name_b})")
 
     filters = ["all", "space_numbers", "numbers", "words", "space_words"]
     for filter_name in filters:
@@ -456,18 +515,59 @@ def run_exp8(pt_path: str, base_dir: str) -> None:
         if not filtered:
             print(f"[exp8] skip '{filter_name}': no words matched")
             continue
-        print(f"[exp8] Filter '{filter_name}': {len(filtered)} words")
+        n_words = len(filtered)
+        n_occurrences = sum(
+            len(next(iter(wd.values()))[name_a]) for wd in filtered.values()
+        )
+        print(f"[exp8] Filter '{filter_name}': {n_words} words, {n_occurrences} occurrences")
         out_dir = os.path.join(base_dir, filter_name)
-        for avg_name, avg_fn in [("micro", micro_average_key_vectors),
-                                  ("macro", macro_average_key_vectors)]:
-            key_vectors = avg_fn(filtered)
-            polar_data = compute_polar_per_head(key_vectors)
+        for avg_name, avg_fn in [("micro", micro_average_vectors),
+                                  ("macro", macro_average_vectors)]:
+            averaged = avg_fn(filtered)
+            polar_data = compute_polar_per_head(averaged, pair=(name_a, name_b))
             plot_polar_heatmaps(
                 polar_data,
                 output_dir=out_dir,
                 suffix=f"_{avg_name}",
-                context=f"{filter_name} | {avg_name}-avg | {Path(pt_path).stem}",
+                context=(
+                    f"{filter_name} | {avg_name}-avg | {Path(slot_dir).name} | "
+                    f"{n_words} word{'s' if n_words != 1 else ''}, "
+                    f"{n_occurrences} occurrence{'s' if n_occurrences != 1 else ''} | "
+                    f"r = ||{name_a}|| / ||{name_b}||"
+                ),
+                name_a=name_a,
+                name_b=name_b,
             )
+
+
+def run_all_qkv_pair_polar_heatmaps(slot_dir: str, out_root: str) -> None:
+    """
+    Polar heatmaps for every ordered C(6,2)=15 QKV slot pair.
+
+    Pair-order rule (see qkv_vectors.order_slot_pair):
+      - A = earlier subtoken index, B = later (only (0,0), (0,1), (1,1))
+      - same-index ties broken by role q < k < v
+      - r = ||A|| / ||B|| with B as reference
+
+    Output:
+      {out_root}/{name_a}_vs_{name_b}/<filter>/kv_{r,theta}_heatmap_{micro,macro}.png
+    """
+    from qkv_vectors import SLOTS, iter_ordered_slot_pairs
+
+    slot_dir_p = Path(slot_dir)
+    missing = [s for s in SLOTS if not (slot_dir_p / f"{s}.pt").is_file()]
+    if missing:
+        print(f"[exp8-all] Warning: missing slot files in {slot_dir}: {missing} "
+              f"(pairs that need them will be skipped)")
+
+    pairs = iter_ordered_slot_pairs()
+    print(f"\n=== All QKV pair polar heatmaps ({len(pairs)} pairs) ===")
+    print(f"  slot_dir: {slot_dir}")
+    print(f"  out_root: {out_root}")
+
+    for name_a, name_b in pairs:
+        pair_dir = os.path.join(out_root, f"{name_a}_vs_{name_b}")
+        run_exp8(slot_dir, pair_dir, name_a=name_a, name_b=name_b)
 
 
 def _run_all_exps(json_path: str, attn_base_dir: str, other_base_dir: str, args) -> None:
@@ -564,8 +664,9 @@ def main():
     parser.add_argument(
         "--pt",
         default=None,
-        help="Path to a KV cache .pt file produced by the kv run (required for exp 8). "
-             "E.g. output/kv_cache/16000_tokens/Pile-CC_16000tokens_kv.pt",
+        help="Path to a QKV slot directory from the kv/qkv run (required for exp 8). "
+             "E.g. output/qkv_cache/16000_tokens/Pile-CC_16000tokens "
+             "or a parent dir containing such component folders.",
     )
     parser.add_argument(
         "--exp",
@@ -719,22 +820,34 @@ def _main_run(args) -> None:
 
     if 8 in args.exp:
         if not args.pt:
-            print("[exp8] Skipping: --pt not provided. Pass a .pt file path or directory to run exp 8.")
+            print("[exp8] Skipping: --pt not provided. Pass a slot directory "
+                  "(with q0..v1 .pt files) or a parent of such directories.")
         elif os.path.isdir(args.pt):
-            pt_files = sorted(Path(args.pt).glob("*.pt"))
-            if not pt_files:
-                print(f"[exp8] No .pt files found in {args.pt}")
+            pt_root = Path(args.pt)
+            # Prefer dirs that have the full six slots; fall back to any with k0+k1
+            def _is_slot_dir(d: Path) -> bool:
+                return _slot_dir_has_all_slots(d) or _slot_dir_has_pair(d)
+
+            if _is_slot_dir(pt_root):
+                token_folder = pt_root.parent.name
+                slug = get_pt_slug(str(pt_root))
+                base_dir_8 = get_base_dir(token_folder, slug, "polar")
+                run_all_qkv_pair_polar_heatmaps(str(pt_root), base_dir_8)
             else:
-                token_folder = Path(args.pt).name
-                for pt_file in pt_files:
-                    slug = get_pt_slug(str(pt_file))
-                    base_dir_8 = get_base_dir(token_folder, slug, "polar")
-                    run_exp8(str(pt_file), base_dir_8)
+                slot_dirs = sorted(
+                    d for d in pt_root.iterdir()
+                    if d.is_dir() and _is_slot_dir(d)
+                )
+                if not slot_dirs:
+                    print(f"[exp8] No slot directories with QKV .pt files found in {args.pt}")
+                else:
+                    token_folder = pt_root.name
+                    for slot_dir in slot_dirs:
+                        slug = get_pt_slug(str(slot_dir))
+                        base_dir_8 = get_base_dir(token_folder, slug, "polar")
+                        run_all_qkv_pair_polar_heatmaps(str(slot_dir), base_dir_8)
         else:
-            token_folder = Path(args.pt).parent.name
-            slug = get_pt_slug(args.pt)
-            base_dir_8 = get_base_dir(token_folder, slug, "polar")
-            run_exp8(args.pt, base_dir_8)
+            print(f"[exp8] --pt must be a directory of slot .pt files, got file: {args.pt}")
 
 
 if __name__ == "__main__":

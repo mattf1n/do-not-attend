@@ -493,18 +493,23 @@ def plot_polar_heatmaps(
     output_dir: str = "figures/polar",
     suffix: str = "",
     context: str = "",
+    name_a: str = "k0",
+    name_b: str = "k1",
 ) -> None:
     """
     Produces two heatmaps from compute_polar_per_head output — one for theta
-    (angular separation between k0 and k1) and one for r (magnitude ratio).
-    Only layers present in polar_data appear as rows (full-attention layers only).
+    (angular separation between name_a and name_b) and one for r (magnitude ratio).
+    Only layers present in polar_data appear as rows.
 
     Args:
-        polar_data: output of keys.compute_polar_per_head
+        polar_data: output of qkv_vectors.compute_polar_per_head
                     { (layer_idx, head_idx): (r, theta) }
         output_dir: directory to save PNGs into
         suffix:     string appended before .png (e.g. "_micro" or "_macro")
         context:    descriptive string shown in the plot title
+        name_a:     earlier (or tie-break) slot — numerator of r
+        name_b:     later (or tie-break) slot — denominator / reference of r
+                    so the r panel is labeled: r = ||name_a|| / ||name_b||
     """
     os.makedirs(output_dir, exist_ok=True)
 
@@ -528,9 +533,14 @@ def plot_polar_heatmaps(
     fig_h = max(4, num_rows * 0.55)
     font_size = max(4, min(7, int(80 / max(num_rows, num_heads))))
 
+    # Explicit r formula for this pair (B is the polar reference vector)
+    r_label = f"r = ||{name_a}|| / ||{name_b}||"
+    theta_label = f"theta (radians) — {name_a} vs {name_b}"
+    pair_tag = f"{name_a} vs {name_b}"
+
     for grid, cmap, vmin, vmax, label, filename in [
-        (theta_grid, "plasma",   0,   np.pi, "theta (radians)",    f"kv_theta_heatmap{suffix}.png"),
-        (r_grid,     "coolwarm", 0,   None,  "r = ||k0|| / ||k1||", f"kv_r_heatmap{suffix}.png"),
+        (theta_grid, "plasma",   0,   np.pi, theta_label, f"kv_theta_heatmap{suffix}.png"),
+        (r_grid,     "coolwarm", 0,   None,  r_label,     f"kv_r_heatmap{suffix}.png"),
     ]:
         if vmax is None:
             vmax = float(np.nanmax(np.abs(r_grid - 1))) + 1  # center coolwarm at 1
@@ -554,7 +564,7 @@ def plot_polar_heatmaps(
         ax.set_yticks(range(num_rows))
         ax.set_xticklabels(range(num_heads), fontsize=7)
         ax.set_yticklabels(present_layers, fontsize=7)
-        title = f"KV key vectors — {label} per (layer, head)"
+        title = f"{pair_tag} — {label} per (layer, head)"
         if context:
             title = f"{title}\n{context}"
         ax.set_title(title, fontsize=12)

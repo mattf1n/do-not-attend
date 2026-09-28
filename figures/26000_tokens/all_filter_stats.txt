@@ -1,0 +1,123 @@
+Pooled across 6 components
+Components:  FreeLaw, NIH ExPorter, PhilPapers, PubMed Abstracts, USPTO Backgrounds, Wikipedia (en)
+Token count: 26000
+Note: word counts are summed per component (same string in two components = two entries).
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines          70          744
+space_numbers    795         2932
+space_words     2762         5371
+space_symbols     29           76
+words            832         1315
+numbers          369          475
+symbols           28           76
+other             12           45
+-------------  -----  -----------
+all             4897        11034
+
+========================================================================
+Per-component breakdown
+========================================================================
+
+Component:   FreeLaw
+Token count: 26000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines          68          742
+space_numbers    334          702
+space_words      279          648
+space_symbols     12           30
+words            137          229
+numbers           24           30
+symbols           17           27
+other              0            0
+-------------  -----  -----------
+all              871         2408
+........................................................................
+
+Component:   NIH ExPorter
+Token count: 26000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           0            0
+space_numbers     38          189
+space_words      640         1225
+space_symbols      0            0
+words            149          224
+numbers            9           10
+symbols            0            0
+other              0            0
+-------------  -----  -----------
+all              836         1648
+........................................................................
+
+Component:   PhilPapers
+Token count: 26000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           0            0
+space_numbers    132          633
+space_words      356          642
+space_symbols      8           17
+words             74          138
+numbers          203          240
+symbols            3           39
+other              1           23
+-------------  -----  -----------
+all              777         1732
+........................................................................
+
+Component:   PubMed Abstracts
+Token count: 26000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           0            0
+space_numbers     95          456
+space_words      617         1123
+space_symbols      3            6
+words            199          251
+numbers           12           13
+symbols            6            7
+other              1            4
+-------------  -----  -----------
+all              933         1860
+........................................................................
+
+Component:   USPTO Backgrounds
+Token count: 26000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           1            1
+space_numbers    108          743
+space_words      303          824
+space_symbols      5           21
+words             76          144
+numbers           40           44
+symbols            1            2
+other              4           11
+-------------  -----  -----------
+all              538         1790
+........................................................................
+
+Component:   Wikipedia (en)
+Token count: 26000
+
+Category       Words  Occurrences
+-------------  -----  -----------
+newlines           1            1
+space_numbers     88          209
+space_words      567          909
+space_symbols      1            2
+words            197          329
+numbers           81          138
+symbols            1            1
+other              6            7
+-------------  -----  -----------
+all              942         1596
+........................................................................

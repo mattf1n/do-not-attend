@@ -1006,6 +1006,73 @@ def generate_filter_stats(path: str) -> str:
     return "\n".join(lines) + "\n"
 
 
+def generate_pooled_filter_stats(json_paths: list) -> str:
+    """
+    Aggregate filter stats across component JSONs.
+
+    Word/occurrence counts are summed per component (same string in two
+    components contributes two word entries), matching pooled exp 6/7 macro
+    and micro pooling.
+
+    Returns a summary table plus each component's generate_filter_stats block.
+    """
+    if not json_paths:
+        return "No components to aggregate.\n"
+
+    categories = list(WORD_CATEGORIES.keys()) + ["other"]
+    totals = {cat: [0, 0] for cat in categories}  # [words, occurrences]
+    all_words = 0
+    all_occ = 0
+    num_tokens = "?"
+    components = []
+
+    for path in json_paths:
+        data = load_json(path)
+        mw_map = data["main_data"]
+        components.append(data.get("component", path))
+        if num_tokens == "?":
+            num_tokens = data.get("num_tokens", "?")
+
+        all_words += len(mw_map)
+        all_occ += sum(len(info["occurrences"]) for info in mw_map.values())
+        for cat in categories:
+            cat_words = [w for w in mw_map if classify_word(w) == cat]
+            totals[cat][0] += len(cat_words)
+            totals[cat][1] += sum(len(mw_map[w]["occurrences"]) for w in cat_words)
+
+    rows = [(cat, totals[cat][0], totals[cat][1]) for cat in categories]
+    col_cat = max(len("Category"), max(len(r[0]) for r in rows))
+    col_w = max(len("Words"), len(str(all_words)))
+    col_o = max(len("Occurrences"), len(str(all_occ)))
+    sep = f"{'-' * col_cat}  {'-' * col_w}  {'-' * col_o}"
+
+    lines = [
+        f"Pooled across {len(json_paths)} components",
+        f"Components:  {', '.join(components)}",
+        f"Token count: {num_tokens}",
+        "Note: word counts are summed per component "
+        "(same string in two components = two entries).",
+        "",
+        f"{'Category':<{col_cat}}  {'Words':>{col_w}}  {'Occurrences':>{col_o}}",
+        sep,
+    ]
+    for cat, n_words, n_occ in rows:
+        lines.append(f"{cat:<{col_cat}}  {n_words:>{col_w}}  {n_occ:>{col_o}}")
+    lines.append(sep)
+    lines.append(f"{'all':<{col_cat}}  {all_words:>{col_w}}  {all_occ:>{col_o}}")
+    lines.append("")
+    lines.append("=" * 72)
+    lines.append("Per-component breakdown")
+    lines.append("=" * 72)
+
+    for path in json_paths:
+        lines.append("")
+        lines.append(generate_filter_stats(path).rstrip("\n"))
+        lines.append("." * 72)
+
+    return "\n".join(lines) + "\n"
+
+
 def rank_words_by_occurrence(path: str, top_n: int = None) -> list:
     """
     Returns a ranked list of (word, occurrence_count) tuples from an output JSON,

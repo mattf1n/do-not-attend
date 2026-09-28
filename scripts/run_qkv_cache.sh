@@ -1,11 +1,11 @@
 #!/bin/bash
 #SBATCH --job-name=do-not-attend-qkv
-#SBATCH --partition=nlp
+#SBATCH --partition=nlp_hiprio
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=200G
-#SBATCH --time=4-00:00:00
+#SBATCH --cpus-per-task=16
+#SBATCH --mem=677G
+#SBATCH --time=7-00:00:00
 #SBATCH --account=swabhas_1625
 #SBATCH --output=logs/%x_%j.out
 #SBATCH --error=logs/%x_%j.err
@@ -22,6 +22,7 @@ OVERWRITE=false
 #   sbatch scripts/run_qkv_cache.sh --tokens 500 --components "PubMed Abstracts" --overwrite
 #
 # Output: output/qkv_cache/{TOKENS}_tokens/{component}_{TOKENS}tokens/{q0..v1}.pt
+# Runs on CPU (no GPU). Filtered Q/K/V cache only; still slower than GPU.
 
 set -euo pipefail
  
@@ -60,9 +61,13 @@ cd "$PROJECT"
 
 mkdir -p logs
 
+# Force CPU even if the node has idle GPUs visible.
+export CUDA_VISIBLE_DEVICES=""
+
 echo "=== Job started: $(date) ==="
 echo "Node: ${SLURMD_NODENAME:-local}"
 echo "TOKENS=$TOKENS  COMPONENTS=$COMPONENTS  MAX_SUBTOKENS=$MAX_SUBTOKENS  OVERWRITE=$OVERWRITE"
+echo "Device: CPU (CUDA_VISIBLE_DEVICES empty)"
 
 source "$PROJECT/.venv/bin/activate"
 

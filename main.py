@@ -32,7 +32,7 @@ from model import get_model, get_bridge, get_attentions
 from tokenization import get_multi_token_words, summarize_multi_token_words
 from analysis import aggregate_multi_token_word_attentions
 from data import get_data_samples, PILE_COMPONENTS
-from qkv_vectors import save_slot_vectors
+from qkv_vectors import save_slot_vectors, qkv_slot_names_filter
 
 
 def _get_max_tokens_input(default=20000):
@@ -378,7 +378,9 @@ def qkv_cache_run():
         print(f"[main] Running TL run_with_cache for component='{component}'...")
         tokens = bridge.to_tokens(text, prepend_bos=False)
         with torch.no_grad():
-            _, cache = bridge.run_with_cache(tokens, prepend_bos=False)
+            _, cache = bridge.run_with_cache(
+                tokens, prepend_bos=False, names_filter=qkv_slot_names_filter
+            )
 
         print(f"[main] Extracting Q/K/V slot vectors for component='{component}'...")
         component_slug = _component_to_filename(component)
@@ -435,7 +437,9 @@ def batch_qkv_run(num_tokens, max_num_subtokens, components, overwrite=False):
 
         tokens = bridge.to_tokens(text, prepend_bos=False)
         with torch.no_grad():
-            _, cache = bridge.run_with_cache(tokens, prepend_bos=False)
+            _, cache = bridge.run_with_cache(
+                tokens, prepend_bos=False, names_filter=qkv_slot_names_filter
+            )
 
         component_slug = _component_to_filename(component)
         slot_dir = os.path.join(out_dir, f"{component_slug}_{num_tokens}tokens")

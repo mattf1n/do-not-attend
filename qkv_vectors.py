@@ -44,6 +44,15 @@ _ROLE_HOOK = {
 }
 
 
+def qkv_slot_names_filter(name: str) -> bool:
+    """names_filter for run_with_cache: keep only post-RoPE Q/K and V."""
+    return (
+        name.endswith("attn.hook_rot_q")
+        or name.endswith("attn.hook_rot_k")
+        or name.endswith("attn.v.hook_out")
+    )
+
+
 def _parse_slot(slot: str) -> tuple[str, int]:
     """Parse 'q0' → ('q', 0)."""
     if not re.fullmatch(r"[qkv][01]", slot):
@@ -493,7 +502,9 @@ if __name__ == "__main__":
     bridge, tokenizer = get_bridge()
     tokens = bridge.to_tokens(text, prepend_bos=False)
     with torch.no_grad():
-        _, cache = bridge.run_with_cache(tokens, prepend_bos=False)
+        _, cache = bridge.run_with_cache(
+            tokens, prepend_bos=False, names_filter=qkv_slot_names_filter
+        )
 
     save_slot_vectors(cache, multi_token_words_map, out_dir)
     collected = collect_vectors(

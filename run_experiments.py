@@ -71,6 +71,7 @@ from analysis import (
     pool_macro_layer_contrast_means,
     get_words_by_filter,
     generate_filter_stats,
+    generate_pooled_filter_stats,
 )
 from visualizations import (
     plot_diff_contrast_heatmap,
@@ -199,6 +200,7 @@ def run_exp3(
         micro_average_vectors,
         compute_polar_per_head,
         plot_polar_grid,
+        qkv_slot_names_filter,
     )
 
     print("Loading TransformerLens bridge for vector extraction...")
@@ -210,7 +212,9 @@ def run_exp3(
 
     tokens = bridge.to_tokens(text, prepend_bos=False)
     with torch.no_grad():
-        _, cache = bridge.run_with_cache(tokens, prepend_bos=False)
+        _, cache = bridge.run_with_cache(
+            tokens, prepend_bos=False, names_filter=qkv_slot_names_filter
+        )
 
     print("Extracting k0/k1 slot vectors...")
     with tempfile.TemporaryDirectory() as tmp:
@@ -317,6 +321,50 @@ def _sample_size(json_path: str, word: str = None) -> tuple[int, int]:
     return n_words, n_occurrences
 
 
+def _sample_size_pooled(json_paths: list) -> tuple[int, int]:
+    """Sum word types and occurrences across components (same string in two = two)."""
+    n_words = 0
+    n_occurrences = 0
+    for path in json_paths:
+        w, o = _sample_size(path)
+        n_words += w
+        n_occurrences += o
+    return n_words, n_occurrences
+
+
+def _build_pooled_context(
+    json_paths: list,
+    label: str = None,
+    averaging: str = None,
+    n_words: int = None,
+    n_occurrences: int = None,
+) -> str:
+    """
+    Context string for pooled plot titles.
+    E.g.: "pooled (6 components) | 16000 tokens | group: numbers | micro | 1842 words, 7067 occurrences"
+    """
+    num_tokens = None
+    if json_paths:
+        try:
+            num_tokens = load_json(json_paths[0]).get("num_tokens")
+        except Exception:
+            num_tokens = None
+
+    parts = [f"pooled ({len(json_paths)} component{'s' if len(json_paths) != 1 else ''})"]
+    if num_tokens:
+        parts.append(f"{num_tokens} tokens")
+    if label and label != "all":
+        parts.append(f"group: {label}")
+    if averaging:
+        parts.append(averaging)
+    if n_words is not None and n_occurrences is not None:
+        parts.append(
+            f"{n_words} word{'s' if n_words != 1 else ''}, "
+            f"{n_occurrences} occurrence{'s' if n_occurrences != 1 else ''}"
+        )
+    return " | ".join(parts)
+
+
 def run_exp4(
     json_path: str,
     output_dir: str,
@@ -394,50 +442,97 @@ def run_exp5(
     plot_layer_contrast_bar(layer_contrasts_macro, output_dir=output_dir, suffix="_macro", context=context_macro)
 
 
-def run_exp6(json_paths: list, output_dir: str, threshold: float = DEFAULT_THRESHOLD) -> None:
+def run_exp6(
+    json_paths: list,
+    output_dir: str,
+    threshold: float = DEFAULT_THRESHOLD,
+    label: str = "all",
+) -> None:
     """
     Experiment 6: Pooled hypothesis rate analysis (heatmap + per-layer bar chart).
     Pools raw pairs from all component JSONs before computing micro and macro rates.
+    Word types are counted per component (same string in two components = two entries).
     """
     print("\n=== Experiment 6: Pooled Hypothesis Rate Analysis ===")
+
+    n_words, n_occurrences = _sample_size_pooled(json_paths)
+    context_micro = _build_pooled_context(
+        json_paths, label=label, averaging="micro",
+        n_words=n_words, n_occurrences=n_occurrences,
+    )
+    context_macro = _build_pooled_context(
+        json_paths, label=label, averaging="macro",
+        n_words=n_words, n_occurrences=n_occurrences,
+    )
+    print(f"    {context_micro}")
 
     rates_head_micro = pool_head_hypothesis_rates(json_paths)
     rates_layer_micro = pool_layer_hypothesis_rates(json_paths)
     passing_micro = sum(1 for v in rates_head_micro.values() if v >= threshold)
     print(f"Micro — Threshold: {threshold:.0%} | "
           f"{passing_micro}/{len(rates_head_micro)} heads pass ({100*passing_micro/len(rates_head_micro):.1f}%)")
-    plot_hypothesis_rate_heatmap(rates_head_micro, output_dir=output_dir, suffix="_micro")
-    plot_layer_hypothesis_bar(rates_layer_micro, output_dir=output_dir, threshold=threshold, suffix="_micro")
+    plot_hypothesis_rate_heatmap(
+        rates_head_micro, output_dir=output_dir, suffix="_micro", context=context_micro
+    )
+    plot_layer_hypothesis_bar(
+        rates_layer_micro, output_dir=output_dir, threshold=threshold,
+        suffix="_micro", context=context_micro,
+    )
 
     rates_head_macro = pool_macro_head_hypothesis_rates(json_paths)
     rates_layer_macro = pool_macro_layer_hypothesis_rates(json_paths)
     passing_macro = sum(1 for v in rates_head_macro.values() if v >= threshold)
     print(f"Macro — Threshold: {threshold:.0%} | "
           f"{passing_macro}/{len(rates_head_macro)} heads pass ({100*passing_macro/len(rates_head_macro):.1f}%)")
-    plot_hypothesis_rate_heatmap(rates_head_macro, output_dir=output_dir, suffix="_macro")
-    plot_layer_hypothesis_bar(rates_layer_macro, output_dir=output_dir, threshold=threshold, suffix="_macro")
+    plot_hypothesis_rate_heatmap(
+        rates_head_macro, output_dir=output_dir, suffix="_macro", context=context_macro
+    )
+    plot_layer_hypothesis_bar(
+        rates_layer_macro, output_dir=output_dir, threshold=threshold,
+        suffix="_macro", context=context_macro,
+    )
 
 
-def run_exp7(json_paths: list, output_dir: str) -> None:
+def run_exp7(json_paths: list, output_dir: str, label: str = "all") -> None:
     """
     Experiment 7: Pooled Michelson contrast analysis (heatmap + per-layer bar chart).
     Pools raw pairs from all component JSONs before computing micro and macro contrast metrics.
+    Word types are counted per component (same string in two components = two entries).
     """
     print("\n=== Experiment 7: Pooled Michelson Contrast Analysis ===")
+
+    n_words, n_occurrences = _sample_size_pooled(json_paths)
+    context_micro = _build_pooled_context(
+        json_paths, label=label, averaging="micro",
+        n_words=n_words, n_occurrences=n_occurrences,
+    )
+    context_macro = _build_pooled_context(
+        json_paths, label=label, averaging="macro",
+        n_words=n_words, n_occurrences=n_occurrences,
+    )
+    print(f"    {context_micro}")
 
     contrasts_micro = pool_biword_score_pairs_contrast(json_paths)
     layer_contrasts_micro = pool_layer_contrast_means(json_paths)
     print(f"Micro — Pooled {sum(len(v) for v in contrasts_micro.values())} contrast values "
           f"across {len(contrasts_micro)} (layer, head) pairs.")
-    plot_diff_contrast_heatmap(contrasts_micro, output_dir=output_dir, suffix="_micro")
-    plot_layer_contrast_bar(layer_contrasts_micro, output_dir=output_dir, suffix="_micro")
+    plot_diff_contrast_heatmap(
+        contrasts_micro, output_dir=output_dir, suffix="_micro", context=context_micro
+    )
+    plot_layer_contrast_bar(
+        layer_contrasts_micro, output_dir=output_dir, suffix="_micro", context=context_micro
+    )
 
     contrasts_macro = pool_macro_biword_score_pairs_contrast(json_paths)
     layer_contrasts_macro = pool_macro_layer_contrast_means(json_paths)
     print(f"Macro — Pooled {sum(len(v) for v in contrasts_macro.values())} contrast values "
           f"across {len(contrasts_macro)} (layer, head) pairs.")
-    plot_diff_contrast_heatmap(contrasts_macro, output_dir=output_dir, suffix="_macro")
-    plot_layer_contrast_bar(layer_contrasts_macro, output_dir=output_dir, suffix="_macro")
+    plot_diff_contrast_heatmap(
+        contrasts_macro, output_dir=output_dir, suffix="_macro", context=context_macro
+    )
+    plot_layer_contrast_bar(
+        layer_contrasts_macro, output_dir=output_dir, suffix="_macro", context=context_macro
+    )
 
 
 def get_pt_slug(pt_path: str) -> str:
@@ -766,6 +861,22 @@ def _write_stats(json_path: str, base_dir: str) -> None:
     print(stats_text)
 
 
+def _write_pooled_stats(json_paths: list, pooled_base: str, folder_name: str) -> None:
+    """Write aggregated filter stats under _pooled/ and figures/{folder}/all_filter_stats.txt."""
+    stats_text = generate_pooled_filter_stats(json_paths)
+    pooled_dir = Path(pooled_base).parent.parent  # figures/{tokens}/_pooled
+    pooled_dir.mkdir(parents=True, exist_ok=True)
+    pooled_path = pooled_dir / "filter_stats.txt"
+    pooled_path.write_text(stats_text, encoding="utf-8")
+    print(f"Saved {pooled_path}")
+
+    all_path = Path("figures") / folder_name / "all_filter_stats.txt"
+    all_path.parent.mkdir(parents=True, exist_ok=True)
+    all_path.write_text(stats_text, encoding="utf-8")
+    print(f"Saved {all_path}")
+    print(stats_text)
+
+
 def _main_run(args) -> None:
     if args.folder:
         json_files = sorted(Path(args.folder).glob("*.json"))
@@ -789,13 +900,54 @@ def _main_run(args) -> None:
 
         pooled_exps = [e for e in [6, 7] if e in args.exp]
         if pooled_exps:
-            print(f"\n--- Pooled experiments {pooled_exps} across {len(json_paths)} components ---")
             pooled_base = get_base_dir(folder_name, "_pooled", args.label, subfolder="attention")
-            if 6 in args.exp:
-                run_exp6(json_paths, output_dir=pooled_base, threshold=args.threshold)
-            if 7 in args.exp:
-                run_exp7(json_paths, output_dir=pooled_base)
-            print(f"\nPooled outputs in {pooled_base}/")
+            # Aggregate stats from full (unfiltered) components; same across filter loops.
+            _write_pooled_stats(json_paths, pooled_base, folder_name)
+
+            filter_name = getattr(args, "filter", None)
+            temp_paths = []
+            try:
+                if filter_name is not None:
+                    pooled_paths = []
+                    for path in json_paths:
+                        temp_path, n_matched = filter_json_to_temp(path, filter_name)
+                        if n_matched == 0:
+                            Path(temp_path).unlink(missing_ok=True)
+                            print(
+                                f"[Warning] No words matched filter {repr(filter_name)} "
+                                f"in {path}. Excluding from pooled."
+                            )
+                            continue
+                        temp_paths.append(temp_path)
+                        pooled_paths.append(temp_path)
+                else:
+                    pooled_paths = json_paths
+
+                if not pooled_paths:
+                    print(
+                        f"\n[Warning] No components matched filter {repr(filter_name)}. "
+                        f"Skipping pooled experiments."
+                    )
+                else:
+                    print(
+                        f"\n--- Pooled experiments {pooled_exps} across "
+                        f"{len(pooled_paths)} components ---"
+                    )
+                    if 6 in args.exp:
+                        run_exp6(
+                            pooled_paths,
+                            output_dir=pooled_base,
+                            threshold=args.threshold,
+                            label=args.label,
+                        )
+                    if 7 in args.exp:
+                        run_exp7(
+                            pooled_paths, output_dir=pooled_base, label=args.label
+                        )
+                    print(f"\nPooled outputs in {pooled_base}/")
+            finally:
+                for temp_path in temp_paths:
+                    Path(temp_path).unlink(missing_ok=True)
     else:
         is_temp = False
         try:
